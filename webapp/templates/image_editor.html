@@ -1,0 +1,122 @@
+{% extends "base.html" %} {% block title %}image messrs - editor{% endblock %}
+{% block content %}
+<div
+    class="editor"
+    data-session-id="{{ session_id }}"
+    data-has-image-b="{{ 'true' if has_image_b else 'false' }}"
+>
+    <div class="editor-toolbar">
+        <a id="new-upload-link" href="{{ url_for('images.index') }}"
+            >&larr; Upload a different image</a
+        >
+    </div>
+
+    <div class="preview-pane">
+        <div class="preview-row">
+            <div class="thumb-stack" id="thumb-stack">
+                <div class="thumb-box" id="thumb-box-a">
+                    <img
+                        id="thumb-a-img"
+                        src="{{ url_for('images.thumbnail', session_id=session_id, slot='a') }}"
+                        alt="Original photo A"
+                    />
+                    <span class="thumb-label">A</span>
+                    <label class="thumb-swap" title="Replace photo A">
+                        Replace
+                        <input type="file" id="thumb-a-input" accept="image/*" />
+                    </label>
+                </div>
+                <div class="thumb-box hidden" id="thumb-box-b">
+                    <img
+                        id="thumb-b-img"
+                        src="{% if has_image_b %}{{ url_for('images.thumbnail', session_id=session_id, slot='b') }}{% endif %}"
+                        alt="Original photo B"
+                    />
+                    <span class="thumb-label">B</span>
+                    <label class="thumb-swap" title="Replace photo B">
+                        Replace
+                        <input type="file" id="thumb-b-input" accept="image/*" />
+                    </label>
+                </div>
+            </div>
+            <div class="preview-stage" id="preview-stage">
+                <img
+                    id="preview-image"
+                    src="{{ url_for('images.original', session_id=session_id) }}"
+                    alt="preview"
+                />
+                <canvas id="mask-canvas" class="hidden"></canvas>
+                <div id="preview-loading" class="preview-loading hidden">Rendering preview&hellip;</div>
+            </div>
+        </div>
+        <p id="preview-meta" class="preview-meta">
+            <span id="preview-dims"></span>
+            <span id="preview-status"></span>
+        </p>
+
+        <div id="mask-controls" class="mask-controls hidden">
+            <label
+                >Brush size
+                <input type="range" id="brush-size" min="4" max="80" value="24"
+            /></label>
+            <button type="button" id="clear-mask">Clear mask</button>
+            <p class="hint">
+                Paint the region to protect (seam carve) or blend in (Poisson
+                blend).
+            </p>
+        </div>
+
+        <div id="second-image-prompt" class="hidden">
+            <p>This effect blends two images - upload a second one:</p>
+            <form
+                action="{{ url_for('images.upload_second', session_id=session_id) }}"
+                method="post"
+                enctype="multipart/form-data"
+            >
+                <input type="file" name="image_b" accept="image/*" required />
+                <button type="submit">Upload second image</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="controls-pane">
+        <label class="effect-select-label">
+            Effect
+            <select id="effect-select">
+                {% for effect in effects %}
+                <option value="{{ effect.name }}">
+                    {{ effect.label }} ({{ effect.category }})
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <details id="effect-about" class="effect-about">
+            <summary>About this effect</summary>
+            <div class="effect-about-body">
+                <p><strong>What it does</strong><span data-about="what"></span></p>
+                <p><strong>How to use it</strong><span data-about="how_to_use"></span></p>
+                <p><strong>What it's used for</strong><span data-about="used_for"></span></p>
+                <p><strong>Examples</strong><span data-about="examples"></span></p>
+            </div>
+        </details>
+
+        <label id="swap-images-control" class="checkbox-row hidden">
+            <input type="checkbox" id="swap-images" />
+            Swap photos (B affects A instead of A affects B)
+        </label>
+
+        <div id="param-controls"></div>
+
+        <button type="button" id="download-btn">Download full-res</button>
+    </div>
+</div>
+
+<script type="application/json" id="effects-data">
+    {{ effects_json | safe }}
+</script>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/confirm-modal.js') }}"></script>
+<script src="{{ url_for('static', filename='js/mask-editor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/controls.js') }}"></script>
+{% endblock %}

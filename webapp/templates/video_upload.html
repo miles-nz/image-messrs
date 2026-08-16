@@ -1,0 +1,39 @@
+{% extends "base.html" %} {% block title %}image messrs - video upload{%
+endblock %} {% block content %}
+<h1>Datamosh a video</h1>
+<p>
+    Upload a video. The I-Frame Smear technique needs a second "motion" clip too
+    - you can add it now or later.
+</p>
+
+<form
+    action="{{ url_for('video.upload') }}"
+    method="post"
+    enctype="multipart/form-data"
+    class="upload-form"
+>
+    <div class="dropzone">
+        <label>
+            Video
+            <input type="file" name="video" accept="video/*" required />
+        </label>
+        <span class="dropzone-filename"
+            >Drag a file here or click to choose</span
+        >
+    </div>
+
+    <div class="dropzone">
+        <label>
+            Motion clip (optional - for I-Frame Smear)
+            <input type="file" name="motion_clip" accept="video/*" />
+        </label>
+        <span class="dropzone-filename"
+            >Drag a file here or click to choose</span
+        >
+    </div>
+
+    <button type="submit">Upload</button>
+</form>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}

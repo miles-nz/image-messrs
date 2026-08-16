@@ -1,0 +1,95 @@
+{% extends "base.html" %} {% block title %}image messrs - video editor{%
+endblock %} {% block content %}
+<div
+    class="video-editor"
+    data-session-id="{{ session_id }}"
+    data-has-motion-clip="{{ 'true' if has_motion_clip else 'false' }}"
+>
+    <div class="editor-toolbar">
+        <a id="new-upload-link" href="{{ url_for('video.index') }}"
+            >&larr; Upload a different video</a
+        >
+    </div>
+
+    <div class="preview-pane">
+        <div class="preview-stage">
+            <img
+                id="thumbnail"
+                src="{{ url_for('video.thumbnail', session_id=session_id) }}"
+                alt="first frame"
+            />
+            <video id="result-video" class="hidden" controls></video>
+        </div>
+
+        <dl class="video-meta">
+            <dt>Duration</dt>
+            <dd>
+                {{ meta.duration or '-' }}{% if meta.duration %}s{% endif %}
+            </dd>
+            <dt>Resolution</dt>
+            <dd>{{ meta.width or '?' }}x{{ meta.height or '?' }}</dd>
+            <dt>Codec</dt>
+            <dd>{{ meta.codec or '-' }}</dd>
+        </dl>
+
+        <div id="motion-clip-prompt" class="hidden">
+            <p>I-Frame Smear needs a second "motion" clip:</p>
+            <form
+                action="{{ url_for('video.upload_motion', session_id=session_id) }}"
+                method="post"
+                enctype="multipart/form-data"
+            >
+                <input
+                    type="file"
+                    name="motion_clip"
+                    accept="video/*"
+                    required
+                />
+                <button type="submit">Upload motion clip</button>
+            </form>
+        </div>
+
+        <a id="download-link" class="hidden" download="image-messrs-output.mp4"
+            >Download result</a
+        >
+    </div>
+
+    <div class="controls-pane">
+        <label class="effect-select-label">
+            Technique
+            <select id="technique-select">
+                {% for name, spec in techniques.items() %}
+                <option value="{{ name }}">{{ spec.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <details id="effect-about" class="effect-about">
+            <summary>About this technique</summary>
+            <div class="effect-about-body">
+                <p><strong>What it does</strong><span data-about="what"></span></p>
+                <p><strong>How to use it</strong><span data-about="how_to_use"></span></p>
+                <p><strong>What it's used for</strong><span data-about="used_for"></span></p>
+                <p><strong>Examples</strong><span data-about="examples"></span></p>
+            </div>
+        </details>
+
+        <div id="param-controls"></div>
+
+        <label class="checkbox-row">
+            <input type="checkbox" id="trim-preview" checked />
+            Preview first 3s only (faster iteration)
+        </label>
+
+        <button type="button" id="process-btn">Run</button>
+        <div id="job-status" class="job-status"></div>
+    </div>
+</div>
+
+<script type="application/json" id="techniques-data">
+    {{ techniques_json | safe }}
+</script>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/confirm-modal.js') }}"></script>
+<script src="{{ url_for('static', filename='js/video-controls.js') }}"></script>
+{% endblock %}

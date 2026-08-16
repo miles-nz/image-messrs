@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "slow: shells out to ffmpeg or does other slow I/O; needs ffmpeg on PATH",
+]

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}image messrs{% endblock %}
+{% block content %}
+<h1>image messrs</h1>
+<p>Pick a mode.</p>
+<div class="mode-cards">
+  <a class="mode-card" href="{{ url_for('images.index') }}">
+    <h2>Image</h2>
+    <p>Seam carving, pixel sorting, channel shift, block displacement, byte corruption, and blends.</p>
+  </a>
+  <a class="mode-card" href="{{ url_for('video.index') }}">
+    <h2>Video</h2>
+    <p>Datamoshing: frame blend / motion trails, feedback loop, experimental I-frame smear.</p>
+  </a>
+</div>
+{% endblock %}

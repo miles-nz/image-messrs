@@ -1,0 +1,39 @@
+{% extends "base.html" %} {% block title %}image messrs - upload{% endblock %}
+{% block content %}
+<h1>Glitch an image</h1>
+<p>
+    Upload an image to start. Blend effects (optical flow, Poisson, seam merge,
+    energy warp) need a second image too - you can add it now or later.
+</p>
+
+<form
+    action="{{ url_for('images.upload') }}"
+    method="post"
+    enctype="multipart/form-data"
+    class="upload-form"
+>
+    <div class="dropzone">
+        <label>
+            Image
+            <input type="file" name="image_a" accept="image/*" required />
+        </label>
+        <span class="dropzone-filename"
+            >Drag a file here or click to choose</span
+        >
+    </div>
+
+    <div class="dropzone">
+        <label>
+            Second image (optional - for blend effects)
+            <input type="file" name="image_b" accept="image/*" />
+        </label>
+        <span class="dropzone-filename"
+            >Drag a file here or click to choose</span
+        >
+    </div>
+
+    <button type="submit">Upload</button>
+</form>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}
