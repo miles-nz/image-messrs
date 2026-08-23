@@ -8,16 +8,43 @@ from pathlib import Path
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, send_file, url_for
 
 from imagemessrs.core.io_utils import save_image
-from imagemessrs.video import datamosh
+from imagemessrs.core.registry import list_effects
+from imagemessrs.effects.base import coerce_params
+from imagemessrs.video import datamosh, frame_effects
 from imagemessrs.video import ffmpeg_wrapper as ffmpeg
 from imagemessrs.video.frame_io import extract_frames
 
+from ..effect_serialization import serialize_effects
 from ..jobs import JOB_TRACKER
 from ..video_store import OUTPUTS_DIR, VIDEO_STORE
+
+# Effects eligible to run as a per-frame video technique: single-image only
+# (no second image to sync per-frame) and shape-preserving (seam carving
+# changes output dimensions, which write_frames can't handle mid-stream).
+FRAME_EFFECT_CATEGORIES_EXCLUDED = {"seam_carve"}
+
+
+def _frame_effects():
+    return [
+        e for e in list_effects() if not e.multi_image and e.category not in FRAME_EFFECT_CATEGORIES_EXCLUDED
+    ]
 
 video_bp = Blueprint("video", __name__, url_prefix="/video")
 
 TECHNIQUES = {
+    "per_frame": {
+        "label": "Per-Frame Effects",
+        "description": "Runs any of this app's still-image effects independently on every frame of the video - no motion or temporal awareness, just the same image transform stamped onto each frame.",
+        "about": {
+            "what": "Applies one of this app's single-image effects (glitch, color, distortion, etc.) to every frame of the video on its own, frame by frame, then stitches the results back into a video at the original frame rate.",
+            "how_to_use": "Pick an effect from the second dropdown below, then dial in its parameters exactly as you would in the image editor. Since every frame gets the exact same settings, a still, unmoving effect (like a fixed color grade) stays rock steady, while a randomized one (like Byte Corruption) reshuffles its noise pattern fresh on every single frame unless its Seed is held fixed relative to frame content.",
+            "used_for": "Bringing any of this app's image effects to video without needing a dedicated video-specific implementation for each one - the fastest way to try glitch, color, and distortion looks on moving footage.",
+            "examples": "This is a generic bridge rather than a named technique of its own - the interesting part is whichever image effect you choose. Effects with randomness (grain, dust, byte corruption) tend to read as lively, flickering texture across frames since each frame's noise is independent; deterministic effects (lens distortion, chromatic aberration, color grades) instead read as a steady, consistent look applied uniformly throughout the clip.",
+        },
+        "needs_motion_clip": False,
+        "frame_effect_bridge": True,
+        "params": [],
+    },
     "frame_blend": {
         "label": "Frame Blend / Motion Trails",
         "description": "Blends each frame with a fading window of the frames before it, ffmpeg-filter style - no bitstream tricks, safest and most predictable of the three.",
@@ -85,7 +112,7 @@ TECHNIQUES = {
         ],
     },
     "iframe_smear": {
-        "label": "I-Frame Smear (experimental)",
+        "label": "Datamosh (I-Frame Smear)",
         "description": "EXPERIMENTAL. Splices this motion clip's motion data directly onto your base video's last frame at the bitstream level, so the motion clip's movement drags and smears the base image instead of replacing it - the classic 'datamoshing' look. Results depend heavily on clip content and aren't guaranteed to play back identically everywhere; check the result before relying on it.",
         "about": {
             "what": "Splices a second “motion” clip's motion data directly onto your base video's last frame at the bitstream level, so the motion clip's movement drags and smears the base image instead of replacing it.",
@@ -201,6 +228,7 @@ def edit(session_id: str):
         session_id=session_id,
         techniques=TECHNIQUES,
         techniques_json=json.dumps(TECHNIQUES),
+        frame_effects_json=json.dumps(serialize_effects(_frame_effects())),
         has_motion_clip=session.motion_path is not None,
         meta=meta,
     )
@@ -217,6 +245,35 @@ def thumbnail(session_id: str):
     return send_file(BytesIO(save_image(first, fmt="PNG")), mimetype="image/png")
 
 
+@video_bp.route("/<session_id>/frame_preview", methods=["POST"])
+def frame_preview(session_id: str):
+    """Runs a per-frame image effect on just the video's first frame, for
+    instant live previewing without waiting on a full ffmpeg job."""
+    session = VIDEO_STORE.get(session_id)
+    if session is None:
+        abort(404)
+
+    effect_name = request.form.get("frame_effect")
+    eligible = {e.name: e for e in _frame_effects()}
+    if effect_name not in eligible:
+        abort(400, description=f"unknown or ineligible frame_effect {effect_name!r}")
+    effect = eligible[effect_name]
+
+    raw_params = {k: v for k, v in request.form.items() if k != "frame_effect"}
+    params = coerce_params(effect.params, raw_params)
+
+    first = next(extract_frames(session.original_path), None)
+    if first is None:
+        abort(400, description="could not read a frame from the uploaded video")
+
+    try:
+        result = effect.fn(first, **params)
+    except Exception as exc:  # user-controlled slider input reaching numerical code
+        abort(400, description=f"Effect failed with current parameters: {exc}")
+
+    return send_file(BytesIO(save_image(result, fmt="PNG")), mimetype="image/png")
+
+
 @video_bp.route("/<session_id>/process", methods=["POST"])
 def process(session_id: str):
     session = VIDEO_STORE.get(session_id)
@@ -231,7 +288,21 @@ def process(session_id: str):
     if spec["needs_motion_clip"] and session.motion_path is None:
         abort(400, description="This technique needs a second (motion) clip - upload one first")
 
-    params = {p["name"]: _coerce(request.form.get(p["name"], p["default"]), p["kind"]) for p in spec["params"]}
+    params: dict = {}
+    frame_effect_name = None
+    frame_effect_params: dict = {}
+    if spec.get("frame_effect_bridge"):
+        frame_effect_name = request.form.get("frame_effect")
+        eligible = {e.name: e for e in _frame_effects()}
+        if frame_effect_name not in eligible:
+            abort(400, description=f"unknown or ineligible frame_effect {frame_effect_name!r}")
+        raw_params = {
+            k: v for k, v in request.form.items() if k not in ("technique", "frame_effect", "trim_preview")
+        }
+        frame_effect_params = coerce_params(eligible[frame_effect_name].params, raw_params)
+    else:
+        params = {p["name"]: _coerce(request.form.get(p["name"], p["default"]), p["kind"]) for p in spec["params"]}
+
     trim = request.form.get("trim_preview") in ("true", "on", "1")
 
     output_path = OUTPUTS_DIR / f"{uuid.uuid4().hex}.mp4"
@@ -243,7 +314,15 @@ def process(session_id: str):
             tmp_dir = Path(tmp_dir_str)
             base_path = _maybe_trim(original_path, trim, tmp_dir, "base" + original_path.suffix)
 
-            if technique == "frame_blend":
+            if technique == "per_frame":
+                frame_effects.apply_frame_effect(
+                    str(base_path),
+                    str(output_path),
+                    frame_effect_name,
+                    frame_effect_params,
+                    on_progress=on_progress,
+                )
+            elif technique == "frame_blend":
                 datamosh.frame_blend(str(base_path), str(output_path), **params)
             elif technique == "feedback_loop":
                 datamosh.feedback_loop(str(base_path), str(output_path), **params)
