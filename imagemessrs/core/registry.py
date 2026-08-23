@@ -5,7 +5,7 @@ from typing import Callable, Literal
 
 from .types import ImageArray, ParamSpec
 
-EffectCategory = Literal["seam_carve", "glitch", "blend", "video", "color"]
+EffectCategory = Literal["seam_carve", "glitch", "blend", "video", "color", "distort"]
 
 
 @dataclass

@@ -10,4 +10,4 @@ from . import (  # noqa: F401
     seam_carve,
     wave_displace,
 )
-from . import blend, color  # noqa: F401
+from . import blend, color, distort  # noqa: F401
