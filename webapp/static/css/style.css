@@ -622,6 +622,51 @@ input[type="range"] {
   color: var(--text);
 }
 
+.animate-panel {
+  border: 1px solid var(--accent);
+  border-left-width: 3px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: rgba(124, 92, 255, 0.07);
+}
+
+.animate-panel summary {
+  cursor: pointer;
+  padding: 0.6rem 0.7rem;
+  color: var(--text);
+  font-weight: 700;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.animate-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.animate-panel summary::before {
+  content: "▸";
+  font-size: 0.7em;
+  color: var(--accent);
+  transition: transform 0.15s ease;
+}
+
+.animate-panel[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.animate-panel summary:hover {
+  color: var(--accent);
+}
+
+.animate-panel-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
 .effect-about-body {
   padding: 0 0.7rem 0.7rem;
   display: flex;
