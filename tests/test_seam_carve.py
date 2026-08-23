@@ -77,3 +77,21 @@ def test_seam_carve_deterministic(gradient_image):
     r1 = run_pipeline(gradient_image, [("seam_carve", params)])
     r2 = run_pipeline(gradient_image, [("seam_carve", params)])
     assert np.array_equal(r1, r2)
+
+
+def test_resize_seam_carve_grows_both_axes_to_exact_target(gradient_image):
+    from imagemessrs.effects.seam_carve import resize_seam_carve
+
+    # gradient_image is 32x48; target is taller and wider, and a different aspect ratio,
+    # so both the contain-prescale and the enlarge-seam-carving on each axis are exercised.
+    target_hw = (40, 60)
+    result = resize_seam_carve(gradient_image, target_hw)
+    assert result.shape == (40, 60, 3)
+    assert result.dtype == np.uint8
+
+
+def test_resize_seam_carve_noop_when_already_target_size(gradient_image):
+    from imagemessrs.effects.seam_carve import resize_seam_carve
+
+    result = resize_seam_carve(gradient_image, gradient_image.shape[:2])
+    assert np.array_equal(result, gradient_image)

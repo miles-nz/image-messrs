@@ -250,6 +250,86 @@ def _insert_seams(array: np.ndarray, seams: np.ndarray) -> np.ndarray:
     return out
 
 
+def _carve_axis(
+    work: np.ndarray,
+    mode: str,
+    seam_count: int,
+    energy_mode: str = "sobel",
+    energy_refresh_interval: int = 1,
+    mask: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray | None]:
+    """Grow ('enlarge') or shrink work's width by seam_count seams. work is (h, w) or
+    (h, w, c); mask, if given, is carved in lockstep. Returns (work, mask)."""
+    energy_fn = _ENERGY_FUNCS[energy_mode]
+    refresh_interval = max(1, int(energy_refresh_interval))
+    seam_count = max(0, int(seam_count))
+
+    seams_done = 0
+    while seams_done < seam_count:
+        width = work.shape[1]
+        if mode == "shrink" and width <= 2:
+            break
+
+        # One DP pass covers a whole "refresh window" - up to refresh_interval
+        # seams are extracted from it below, instead of one DP pass per seam.
+        energy = energy_fn(work)
+        if mask is not None:
+            energy = energy + mask.astype(np.float64) * _PROTECT_BIAS
+
+        batch_k = min(refresh_interval, seam_count - seams_done)
+        if mode == "shrink":
+            batch_k = min(batch_k, width - 2)  # never remove past the width>2 floor
+            if batch_k <= 0:
+                break
+
+        cost, backtrack = _dp_seam_cost_table(energy)
+        seam_matrix = _backtrack_all_columns(backtrack)
+        seams = _select_seam_batch(cost[-1], seam_matrix, batch_k)
+
+        if mode == "shrink":
+            work = _remove_seams(work, seams)
+            if mask is not None:
+                mask = _remove_seams(mask, seams)
+        else:
+            work = _insert_seams(work, seams)
+            if mask is not None:
+                mask = _insert_seams(mask, seams)
+
+        seams_done += seams.shape[0]
+
+    return work, mask
+
+
+def resize_seam_carve(
+    image: np.ndarray,
+    target_hw: tuple[int, int],
+    energy_mode: str = "sobel",
+    energy_refresh_interval: int = 1,
+) -> np.ndarray:
+    """Fit image into target_hw without stretching or padding: scale to fit entirely
+    within the target (like a "contain" resize), then close the remaining gap on each
+    axis via content-aware seam duplication (seam carving's enlarge mode) rather than a
+    padded border."""
+    th, tw = target_hw
+    h, w = image.shape[:2]
+    if (h, w) == (th, tw):
+        return image
+
+    scale = min(tw / w, th / h)
+    new_w = min(tw, max(1, round(w * scale)))
+    new_h = min(th, max(1, round(h * scale)))
+    work = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+
+    if new_w < tw:
+        work, _ = _carve_axis(work, "enlarge", tw - new_w, energy_mode, energy_refresh_interval)
+    if work.shape[0] < th:
+        transposed = np.transpose(work, (1, 0, 2)).copy()
+        transposed, _ = _carve_axis(transposed, "enlarge", th - work.shape[0], energy_mode, energy_refresh_interval)
+        work = np.transpose(transposed, (1, 0, 2)).copy()
+
+    return work
+
+
 @register_effect(
     name="seam_carve",
     label="Seam Carving",
@@ -315,41 +395,6 @@ def apply(
         mask = np.transpose(protect_mask) if horizontal else protect_mask
         mask = mask.astype(bool)
 
-    energy_fn = _ENERGY_FUNCS[energy_mode]
-    refresh_interval = max(1, int(energy_refresh_interval))
-    seam_count = max(1, int(seam_count))
-
-    seams_done = 0
-    while seams_done < seam_count:
-        width = work.shape[1]
-        if mode == "shrink" and width <= 2:
-            break
-
-        # One DP pass covers a whole "refresh window" - up to refresh_interval
-        # seams are extracted from it below, instead of one DP pass per seam.
-        energy = energy_fn(work)
-        if mask is not None:
-            energy = energy + mask.astype(np.float64) * _PROTECT_BIAS
-
-        batch_k = min(refresh_interval, seam_count - seams_done)
-        if mode == "shrink":
-            batch_k = min(batch_k, width - 2)  # never remove past the width>2 floor
-            if batch_k <= 0:
-                break
-
-        cost, backtrack = _dp_seam_cost_table(energy)
-        seam_matrix = _backtrack_all_columns(backtrack)
-        seams = _select_seam_batch(cost[-1], seam_matrix, batch_k)
-
-        if mode == "shrink":
-            work = _remove_seams(work, seams)
-            if mask is not None:
-                mask = _remove_seams(mask, seams)
-        else:
-            work = _insert_seams(work, seams)
-            if mask is not None:
-                mask = _insert_seams(mask, seams)
-
-        seams_done += seams.shape[0]
+    work, _ = _carve_axis(work, mode, max(1, int(seam_count)), energy_mode, energy_refresh_interval, mask)
 
     return np.transpose(work, (1, 0, 2)).copy() if horizontal else work
