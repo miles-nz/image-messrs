@@ -352,6 +352,19 @@ input[type="number"] {
   padding: 0.4rem;
 }
 
+select optgroup {
+  background: var(--panel);
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 600;
+}
+
+select option {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 400;
+}
+
 input[type="number"] {
   width: 6ch;
 }

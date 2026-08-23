@@ -54,18 +54,37 @@
     }
   });
 
+  const CATEGORY_ORDER = ["seam_carve", "glitch", "blend", "color", "distort", "video"];
+  const CATEGORY_LABELS = {
+    seam_carve: "Seam Carve",
+    glitch: "Glitch",
+    blend: "Blend",
+    color: "Color",
+    distort: "Distort",
+    video: "Video",
+  };
+
   function effectsForMode(mode) {
     return effectsData.filter((e) => e.multi_image === (mode === "multi"));
   }
 
   function populateEffectSelect(mode) {
     effectSelect.innerHTML = "";
-    effectsForMode(mode).forEach((effect) => {
-      const opt = document.createElement("option");
-      opt.value = effect.name;
-      opt.textContent = `${effect.label} (${effect.category})`;
-      opt.title = effect.description || "";
-      effectSelect.appendChild(opt);
+    const effects = effectsForMode(mode);
+    const categories = CATEGORY_ORDER.filter((cat) => effects.some((e) => e.category === cat));
+    categories.forEach((category) => {
+      const group = document.createElement("optgroup");
+      group.label = CATEGORY_LABELS[category] || category;
+      effects
+        .filter((e) => e.category === category)
+        .forEach((effect) => {
+          const opt = document.createElement("option");
+          opt.value = effect.name;
+          opt.textContent = effect.label;
+          opt.title = effect.description || "";
+          group.appendChild(opt);
+        });
+      effectSelect.appendChild(group);
     });
   }
 
