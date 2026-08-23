@@ -151,8 +151,14 @@
 
   function applyZoomScale() {
     if (!zoomImageEl.naturalWidth) return;
+    const height = Math.round(zoomImageEl.naturalHeight * zoomScale);
     zoomImageEl.style.width = Math.round(zoomImageEl.naturalWidth * zoomScale) + "px";
-    zoomImageEl.style.height = Math.round(zoomImageEl.naturalHeight * zoomScale) + "px";
+    zoomImageEl.style.height = height + "px";
+    // text-align:center handles horizontal centering (and stays fully scrollable
+    // when the image overflows); vertical centering needs a margin since there's
+    // no vertical equivalent that keeps the same scroll-safe behavior.
+    const vpHeight = zoomViewportEl.clientHeight;
+    zoomImageEl.style.marginTop = height < vpHeight ? Math.round((vpHeight - height) / 2) + "px" : "0";
     zoomLevelLabel.textContent = Math.round(zoomScale * 100) + "%";
   }
 

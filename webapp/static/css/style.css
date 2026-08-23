@@ -461,6 +461,7 @@ button.secondary:hover:not(:disabled) {
   flex: 1 1 auto;
   overflow: auto;
   cursor: grab;
+  text-align: center;
 }
 
 .zoom-viewport.dragging {
@@ -468,7 +469,7 @@ button.secondary:hover:not(:disabled) {
 }
 
 #zoom-image {
-  display: block;
+  display: inline-block;
   user-select: none;
   -webkit-user-drag: none;
 }
