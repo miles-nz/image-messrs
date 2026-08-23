@@ -1,0 +1,25 @@
+{
+  "id": "canon_powershot_s400_2003",
+  "label": "Canon PowerShot S400 (2003)",
+  "type": "digital",
+  "description": "Mid-2000s 4MP compact digicam: slightly better dynamic range than earlier CCDs, moderate noise, a mild kit-lens color fringe, and visible JPEG compression.",
+  "tone_curve": {
+    "r": [[0, 2], [128, 124], [255, 253]],
+    "g": [[0, 2], [128, 130], [255, 253]],
+    "b": [[0, 8], [128, 118], [255, 248]]
+  },
+  "saturation": { "global_mult": 1.05 },
+  "split_toning": {
+    "shadow_color": [15, 20, 30],
+    "shadow_strength": 0.03,
+    "highlight_color": [245, 245, 240],
+    "highlight_strength": 0.03
+  },
+  "vignette": { "strength": 0.08, "radius": 0.65, "falloff": 2.2 },
+  "chromatic_aberration": { "intensity": 0.2 },
+  "grain": { "intensity": 0.0, "size": 1.0 },
+  "halation": { "intensity": 0.0 },
+  "sensor_noise": { "intensity": 0.04, "chroma": 0.03 },
+  "dynamic_range": { "black_point": 4, "white_point": 245 },
+  "jpeg_quality": 75
+}

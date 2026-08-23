@@ -1,0 +1,25 @@
+{
+  "id": "holga_120n",
+  "label": "Holga 120N",
+  "type": "film",
+  "description": "Cheap plastic-lens toy camera: heavy vignette, strong radial lens distortion/color fringing, coarse grain, and warm light-leak edges.",
+  "tone_curve": {
+    "r": [[0, 5], [64, 70], [128, 150], [192, 215], [255, 255]],
+    "g": [[0, 0], [128, 135], [255, 255]],
+    "b": [[0, 8], [128, 110], [255, 230]]
+  },
+  "saturation": { "global_mult": 1.1, "curve": [[0, 1.0], [128, 1.15], [255, 1.0]] },
+  "split_toning": {
+    "shadow_color": [10, 10, 30],
+    "shadow_strength": 0.06,
+    "highlight_color": [255, 180, 90],
+    "highlight_strength": 0.22
+  },
+  "vignette": { "strength": 0.6, "radius": 0.3, "falloff": 1.6 },
+  "chromatic_aberration": { "intensity": 0.45 },
+  "grain": { "intensity": 0.12, "size": 1.8 },
+  "halation": { "intensity": 0.1, "threshold": 0.75, "radius": 7.0 },
+  "sensor_noise": { "intensity": 0.0, "chroma": 0.0 },
+  "dynamic_range": { "black_point": 0, "white_point": 255 },
+  "jpeg_quality": null
+}

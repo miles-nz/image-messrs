@@ -1,0 +1,25 @@
+{
+  "id": "fuji_velvia",
+  "label": "Fujifilm Velvia",
+  "type": "film",
+  "description": "Modern high-saturation slide film beloved by landscape shooters — deep blacks, punchy contrast, vivid greens and blues, clean with no grain or vignette.",
+  "tone_curve": {
+    "r": [[0, 0], [64, 48], [128, 132], [192, 210], [255, 255]],
+    "g": [[0, 0], [64, 50], [128, 134], [192, 208], [255, 255]],
+    "b": [[0, 0], [64, 52], [128, 130], [192, 202], [255, 255]]
+  },
+  "saturation": { "global_mult": 1.3, "curve": [[0, 1.0], [128, 1.35], [255, 1.1]] },
+  "split_toning": {
+    "shadow_color": [0, 0, 0],
+    "shadow_strength": 0.0,
+    "highlight_color": [255, 255, 255],
+    "highlight_strength": 0.0
+  },
+  "vignette": { "strength": 0.0, "radius": 0.65, "falloff": 2.0 },
+  "chromatic_aberration": { "intensity": 0.0 },
+  "grain": { "intensity": 0.0, "size": 1.0 },
+  "halation": { "intensity": 0.0 },
+  "sensor_noise": { "intensity": 0.0, "chroma": 0.0 },
+  "dynamic_range": { "black_point": 6, "white_point": 253 },
+  "jpeg_quality": null
+}

@@ -1,0 +1,12 @@
+{
+  "id": "film_slr_35mm",
+  "label": "35mm Film SLR / Rangefinder",
+  "description": "A proper manual film camera with real glass optics - much closer to neutral than a disposable, with only the fine grain and slightly gentler contrast that comes from shooting on film instead of a digital sensor.",
+  "exif_aliases": [],
+  "correction": {
+    "undo_sharpen": 0.1,
+    "undo_hdr": 0.1,
+    "undo_noise_reduction": 0.15,
+    "undo_saturation": 0.0
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "portra_400",
+  "label": "Kodak Portra 400",
+  "type": "film",
+  "description": "Soft-contrast professional color negative film prized for flattering, warm skin tones, gentle highlight rolloff, and fine grain.",
+  "tone_curve": {
+    "r": [[0, 12], [64, 75], [128, 138], [192, 200], [255, 250]],
+    "g": [[0, 8], [128, 132], [255, 250]],
+    "b": [[0, 15], [128, 122], [255, 240]]
+  },
+  "saturation": { "global_mult": 0.95, "curve": [[0, 0.9], [128, 1.0], [255, 0.85]] },
+  "split_toning": {
+    "shadow_color": [40, 30, 20],
+    "shadow_strength": 0.04,
+    "highlight_color": [255, 235, 205],
+    "highlight_strength": 0.07
+  },
+  "vignette": { "strength": 0.1, "radius": 0.65, "falloff": 2.0 },
+  "chromatic_aberration": { "intensity": 0.05 },
+  "grain": { "intensity": 0.03, "size": 1.0 },
+  "halation": { "intensity": 0.08, "threshold": 0.9, "radius": 5.0 },
+  "sensor_noise": { "intensity": 0.0, "chroma": 0.0 },
+  "dynamic_range": { "black_point": 4, "white_point": 250 },
+  "jpeg_quality": null
+}

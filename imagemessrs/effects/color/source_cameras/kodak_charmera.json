@@ -1,0 +1,12 @@
+{
+  "id": "kodak_charmera",
+  "label": "Kodak Charmera (Keychain Digicam)",
+  "description": "Tiny fixed-lens 1.6MP keychain digicam: no computational photography to undo, but its own hardware character shows through clearly - a soft plastic lens, visible small-CMOS sensor noise, and limited dynamic range.",
+  "exif_aliases": ["kodak", "charmera"],
+  "correction": {
+    "undo_sharpen": 0.35,
+    "undo_hdr": 0.3,
+    "undo_noise_reduction": 0.45,
+    "undo_saturation": 0.0
+  }
+}

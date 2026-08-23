@@ -1,0 +1,25 @@
+{
+  "id": "clean_digital_mono",
+  "label": "Clean Digital Monochrome",
+  "type": "digital",
+  "description": "Contrasty modern black-and-white sensor look, full desaturation with a strong tonal S-curve. No grain, halation, or vignette, distinguishing it from a vintage silver-gelatin B&W look.",
+  "tone_curve": {
+    "r": [[0, 0], [64, 44], [128, 132], [192, 214], [255, 255]],
+    "g": [[0, 0], [64, 44], [128, 132], [192, 214], [255, 255]],
+    "b": [[0, 0], [64, 44], [128, 132], [192, 214], [255, 255]]
+  },
+  "saturation": { "global_mult": 0.0, "curve": [] },
+  "split_toning": {
+    "shadow_color": [0, 0, 0],
+    "shadow_strength": 0.0,
+    "highlight_color": [255, 255, 255],
+    "highlight_strength": 0.0
+  },
+  "vignette": { "strength": 0.0, "radius": 0.65, "falloff": 2.0 },
+  "chromatic_aberration": { "intensity": 0.0 },
+  "grain": { "intensity": 0.0, "size": 1.0 },
+  "halation": { "intensity": 0.0 },
+  "sensor_noise": { "intensity": 0.0, "chroma": 0.0 },
+  "dynamic_range": { "black_point": 0, "white_point": 255 },
+  "jpeg_quality": null
+}

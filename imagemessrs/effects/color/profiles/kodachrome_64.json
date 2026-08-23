@@ -1,0 +1,25 @@
+{
+  "id": "kodachrome_64",
+  "label": "Kodachrome 64",
+  "type": "film",
+  "description": "Punchy, high-contrast reversal film with deep reds and cool shadows — the iconic 1960s-80s National Geographic look.",
+  "tone_curve": {
+    "r": [[0, 0], [64, 50], [128, 135], [192, 205], [255, 255]],
+    "g": [[0, 0], [128, 130], [255, 255]],
+    "b": [[0, 10], [128, 120], [255, 245]]
+  },
+  "saturation": { "global_mult": 1.15, "curve": [[0, 1.0], [128, 1.2], [255, 0.9]] },
+  "split_toning": {
+    "shadow_color": [20, 30, 60],
+    "shadow_strength": 0.08,
+    "highlight_color": [255, 220, 160],
+    "highlight_strength": 0.1
+  },
+  "vignette": { "strength": 0.25, "radius": 0.55, "falloff": 2.2 },
+  "chromatic_aberration": { "intensity": 0.15 },
+  "grain": { "intensity": 0.06, "size": 1.2 },
+  "halation": { "intensity": 0.0 },
+  "sensor_noise": { "intensity": 0.0, "chroma": 0.0 },
+  "dynamic_range": { "black_point": 0, "white_point": 255 },
+  "jpeg_quality": null
+}

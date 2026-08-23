@@ -1,0 +1,12 @@
+{
+  "id": "unknown",
+  "label": "Unknown / Other",
+  "description": "No source-camera correction applied - use this when you don't know or don't want to compensate for the original capture device.",
+  "exif_aliases": [],
+  "correction": {
+    "undo_sharpen": 0.0,
+    "undo_hdr": 0.0,
+    "undo_noise_reduction": 0.0,
+    "undo_saturation": 0.0
+  }
+}

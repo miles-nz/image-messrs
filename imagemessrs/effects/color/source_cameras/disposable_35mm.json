@@ -1,0 +1,12 @@
+{
+  "id": "disposable_35mm",
+  "label": "Disposable 35mm Film Camera",
+  "description": "Single-use point-and-shoot film camera (e.g. Kodak FunSaver, Fujifilm QuickSnap): a cheap plastic lens, uncorrected exposure, and the coarse grain of consumer print film pushed through a basic built-in flash.",
+  "exif_aliases": [],
+  "correction": {
+    "undo_sharpen": 0.3,
+    "undo_hdr": 0.15,
+    "undo_noise_reduction": 0.4,
+    "undo_saturation": 0.0
+  }
+}

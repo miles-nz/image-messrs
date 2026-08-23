@@ -1,0 +1,25 @@
+{
+  "id": "polaroid_sx70",
+  "label": "Polaroid SX-70",
+  "type": "film",
+  "description": "Instant-film look: heavy vignette, warm/faded cast, lifted blacks, soft tonal transitions, and a gentle warm halation glow.",
+  "tone_curve": {
+    "r": [[0, 25], [64, 90], [128, 150], [192, 205], [255, 245]],
+    "g": [[0, 20], [128, 140], [255, 235]],
+    "b": [[0, 30], [128, 115], [255, 210]]
+  },
+  "saturation": { "global_mult": 0.85, "curve": [[0, 0.8], [128, 0.9], [255, 0.75]] },
+  "split_toning": {
+    "shadow_color": [50, 40, 60],
+    "shadow_strength": 0.1,
+    "highlight_color": [255, 225, 170],
+    "highlight_strength": 0.18
+  },
+  "vignette": { "strength": 0.45, "radius": 0.4, "falloff": 1.8 },
+  "chromatic_aberration": { "intensity": 0.1 },
+  "grain": { "intensity": 0.04, "size": 1.5 },
+  "halation": { "intensity": 0.15, "threshold": 0.8, "radius": 8.0 },
+  "sensor_noise": { "intensity": 0.0, "chroma": 0.0 },
+  "dynamic_range": { "black_point": 15, "white_point": 245 },
+  "jpeg_quality": null
+}

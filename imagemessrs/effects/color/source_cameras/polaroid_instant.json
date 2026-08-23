@@ -1,0 +1,12 @@
+{
+  "id": "polaroid_instant",
+  "label": "Polaroid (Instant Film)",
+  "description": "Classic instant film: a soft plastic lens, low-contrast faded chemistry, visible grain, and a warm color shift baked into the print itself.",
+  "exif_aliases": ["polaroid"],
+  "correction": {
+    "undo_sharpen": 0.35,
+    "undo_hdr": 0.35,
+    "undo_noise_reduction": 0.3,
+    "undo_saturation": 0.15
+  }
+}

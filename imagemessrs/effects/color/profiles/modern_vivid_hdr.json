@@ -1,0 +1,25 @@
+{
+  "id": "modern_vivid_hdr",
+  "label": "Modern Vivid HDR",
+  "type": "digital",
+  "description": "Punchy computational-photography look from a modern flagship phone: lifted shadow detail, boosted midtone contrast and saturation, ultra clean with no grain, vignette, or aberration.",
+  "tone_curve": {
+    "r": [[0, 22], [64, 92], [128, 138], [192, 208], [255, 255]],
+    "g": [[0, 22], [64, 92], [128, 138], [192, 208], [255, 255]],
+    "b": [[0, 20], [64, 88], [128, 134], [192, 204], [255, 255]]
+  },
+  "saturation": { "global_mult": 1.25, "curve": [[0, 1.15], [128, 1.3], [255, 1.15]] },
+  "split_toning": {
+    "shadow_color": [0, 0, 0],
+    "shadow_strength": 0.0,
+    "highlight_color": [255, 255, 255],
+    "highlight_strength": 0.0
+  },
+  "vignette": { "strength": 0.0, "radius": 0.65, "falloff": 2.0 },
+  "chromatic_aberration": { "intensity": 0.0 },
+  "grain": { "intensity": 0.0, "size": 1.0 },
+  "halation": { "intensity": 0.0 },
+  "sensor_noise": { "intensity": 0.0, "chroma": 0.0 },
+  "dynamic_range": { "black_point": 0, "white_point": 255 },
+  "jpeg_quality": null
+}

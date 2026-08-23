@@ -1,0 +1,25 @@
+{
+  "id": "kodak_dc4800_1999",
+  "label": "Kodak DC4800 (1999)",
+  "type": "digital",
+  "description": "Early 2MP CCD compact: cool/greenish cast, clipped highlights, visible chroma noise in shadows, and hard JPEG compression.",
+  "tone_curve": {
+    "r": [[0, 0], [128, 118], [255, 250]],
+    "g": [[0, 5], [128, 132], [255, 255]],
+    "b": [[0, 5], [128, 110], [255, 240]]
+  },
+  "saturation": { "global_mult": 0.9 },
+  "split_toning": {
+    "shadow_color": [20, 40, 40],
+    "shadow_strength": 0.05,
+    "highlight_color": [230, 240, 235],
+    "highlight_strength": 0.05
+  },
+  "vignette": { "strength": 0.15, "radius": 0.6, "falloff": 2.0 },
+  "chromatic_aberration": { "intensity": 0.35 },
+  "grain": { "intensity": 0.0, "size": 1.0 },
+  "halation": { "intensity": 0.0 },
+  "sensor_noise": { "intensity": 0.08, "chroma": 0.05 },
+  "dynamic_range": { "black_point": 8, "white_point": 235 },
+  "jpeg_quality": 55
+}

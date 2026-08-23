@@ -1,0 +1,12 @@
+{
+  "id": "android_flagship",
+  "label": "Android Flagship (Pixel / Galaxy)",
+  "description": "Google/Samsung computational photography: HDR+ or scene-optimizer tone-mapping and punchy default saturation, with heavy noise reduction and sharpening baked in.",
+  "exif_aliases": ["pixel", "google", "samsung", "galaxy", "sm-"],
+  "correction": {
+    "undo_sharpen": 0.35,
+    "undo_hdr": 0.4,
+    "undo_noise_reduction": 0.3,
+    "undo_saturation": 0.3
+  }
+}

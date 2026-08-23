@@ -4,4 +4,5 @@ from . import (  # noqa: F401
     film_grain,
     light_leaks,
     radial_chromatic_aberration,
+    vintage_profile,
 )

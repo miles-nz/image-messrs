@@ -1,0 +1,25 @@
+{
+  "id": "fuji_classic_chrome",
+  "label": "Fujifilm Classic Chrome",
+  "type": "film",
+  "description": "Muted, documentary-style digital simulation with matte lifted blacks and understated color — an editorial look with no grain or vignette.",
+  "tone_curve": {
+    "r": [[0, 14], [64, 62], [128, 126], [192, 190], [255, 248]],
+    "g": [[0, 14], [64, 60], [128, 124], [192, 188], [255, 246]],
+    "b": [[0, 16], [64, 62], [128, 122], [192, 184], [255, 240]]
+  },
+  "saturation": { "global_mult": 0.85, "curve": [[0, 0.75], [128, 0.9], [255, 0.85]] },
+  "split_toning": {
+    "shadow_color": [30, 35, 45],
+    "shadow_strength": 0.05,
+    "highlight_color": [235, 225, 210],
+    "highlight_strength": 0.03
+  },
+  "vignette": { "strength": 0.0, "radius": 0.65, "falloff": 2.0 },
+  "chromatic_aberration": { "intensity": 0.0 },
+  "grain": { "intensity": 0.0, "size": 1.0 },
+  "halation": { "intensity": 0.0 },
+  "sensor_noise": { "intensity": 0.0, "chroma": 0.0 },
+  "dynamic_range": { "black_point": 10, "white_point": 248 },
+  "jpeg_quality": null
+}

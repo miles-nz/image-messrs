@@ -1,0 +1,25 @@
+{
+  "id": "cinematic_teal_orange",
+  "label": "Cinematic Teal & Orange",
+  "type": "digital",
+  "description": "Modern blockbuster color grade: teal-shifted shadows, warm orange highlights, and flattened midtone contrast. Clean digital source, no grain or vignette.",
+  "tone_curve": {
+    "r": [[0, 12], [128, 128], [255, 245]],
+    "g": [[0, 10], [128, 126], [255, 245]],
+    "b": [[0, 8], [128, 124], [255, 242]]
+  },
+  "saturation": { "global_mult": 0.9, "curve": [[0, 0.9], [128, 0.85], [255, 0.9]] },
+  "split_toning": {
+    "shadow_color": [10, 90, 100],
+    "shadow_strength": 0.14,
+    "highlight_color": [255, 165, 90],
+    "highlight_strength": 0.13
+  },
+  "vignette": { "strength": 0.0, "radius": 0.65, "falloff": 2.0 },
+  "chromatic_aberration": { "intensity": 0.0 },
+  "grain": { "intensity": 0.0, "size": 1.0 },
+  "halation": { "intensity": 0.0 },
+  "sensor_noise": { "intensity": 0.0, "chroma": 0.0 },
+  "dynamic_range": { "black_point": 8, "white_point": 250 },
+  "jpeg_quality": null
+}

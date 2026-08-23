@@ -1,0 +1,12 @@
+{
+  "id": "fujifilm_instax",
+  "label": "Fujifilm Instax (Mini/Wide)",
+  "description": "Modern instant film: a plastic fixed-focus lens with real softness, exposure that varies shot to shot, and the moderate grain of integral instant-film chemistry.",
+  "exif_aliases": ["instax"],
+  "correction": {
+    "undo_sharpen": 0.3,
+    "undo_hdr": 0.2,
+    "undo_noise_reduction": 0.25,
+    "undo_saturation": 0.0
+  }
+}

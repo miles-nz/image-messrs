@@ -1,0 +1,12 @@
+{
+  "id": "dslr_mirrorless",
+  "label": "DSLR / Mirrorless Camera",
+  "description": "Large-sensor camera with minimal in-camera computational processing - close to a neutral starting point, so little correction is needed before grading.",
+  "exif_aliases": ["nikon", "canon", "sony", "fujifilm", "panasonic", "olympus", "leica"],
+  "correction": {
+    "undo_sharpen": 0.05,
+    "undo_hdr": 0.05,
+    "undo_noise_reduction": 0.0,
+    "undo_saturation": 0.05
+  }
+}

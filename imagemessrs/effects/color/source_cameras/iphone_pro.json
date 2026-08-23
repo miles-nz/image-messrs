@@ -1,0 +1,12 @@
+{
+  "id": "iphone_pro",
+  "label": "iPhone (Modern, e.g. 15-17 Pro)",
+  "description": "Apple's computational photography pipeline: Smart HDR/Deep Fusion tone-mapping, aggressive sharpening halos, and multi-frame noise reduction, all baked into the JPEG before any vintage look is applied.",
+  "exif_aliases": ["apple", "iphone"],
+  "correction": {
+    "undo_sharpen": 0.4,
+    "undo_hdr": 0.45,
+    "undo_noise_reduction": 0.35,
+    "undo_saturation": 0.2
+  }
+}
