@@ -272,6 +272,7 @@ button.secondary:hover:not(:disabled) {
   border-radius: 4px;
 }
 
+.zoom-btn,
 .compare-toggle-btn {
   position: absolute;
   top: 0.75rem;
@@ -283,6 +284,17 @@ button.secondary:hover:not(:disabled) {
   border-radius: 6px;
   padding: 0.35rem 0.7rem;
   font-size: 0.78rem;
+}
+
+.zoom-btn {
+  left: 0.75rem;
+  right: auto;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .compare-toggle-btn:hover:not(:disabled) {
@@ -394,6 +406,81 @@ button.secondary:hover:not(:disabled) {
 
 #preview-status.error {
   color: var(--danger);
+}
+
+.zoom-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(10, 10, 13, 0.94);
+  display: flex;
+  flex-direction: column;
+}
+
+.zoom-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.zoom-toolbar button {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  min-width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  padding: 0 0.6rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.zoom-toolbar button:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#zoom-level-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  min-width: 3.5em;
+  text-align: center;
+}
+
+.zoom-close-btn {
+  margin-left: auto;
+  font-size: 1.2rem;
+}
+
+.zoom-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: auto;
+  cursor: grab;
+}
+
+.zoom-viewport.dragging {
+  cursor: grabbing;
+}
+
+#zoom-image {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.zoom-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  font-size: 0.9rem;
 }
 
 .mask-controls,

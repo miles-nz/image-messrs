@@ -56,6 +56,14 @@
                 />
                 <button
                     type="button"
+                    id="zoom-btn"
+                    class="zoom-btn"
+                    title="Zoom into full-resolution result"
+                >
+                    Zoom
+                </button>
+                <button
+                    type="button"
                     id="compare-toggle-btn"
                     class="compare-toggle-btn hidden"
                     title="Compare with original"
@@ -84,6 +92,21 @@
             <span id="preview-dims"></span>
             <span id="preview-status"></span>
         </p>
+
+        <div id="zoom-lightbox" class="zoom-lightbox hidden">
+            <div class="zoom-toolbar">
+                <button type="button" id="zoom-out-btn" title="Zoom out">&minus;</button>
+                <span id="zoom-level-label">100%</span>
+                <button type="button" id="zoom-in-btn" title="Zoom in">&plus;</button>
+                <button type="button" id="zoom-reset-fit-btn" title="Fit to screen">Fit</button>
+                <button type="button" id="zoom-reset-100-btn" title="Actual size (100%)">100%</button>
+                <button type="button" id="zoom-close-btn" class="zoom-close-btn" title="Close">&times;</button>
+            </div>
+            <div id="zoom-viewport" class="zoom-viewport">
+                <img id="zoom-image" alt="Full-resolution result" />
+                <div id="zoom-loading" class="zoom-loading hidden">Loading full-resolution image&hellip;</div>
+            </div>
+        </div>
 
         <div id="mask-controls" class="mask-controls hidden">
             <label

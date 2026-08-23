@@ -25,6 +25,17 @@
   const compareBeforeWrapEl = document.getElementById("compare-before-wrap");
   const compareBeforeImg = document.getElementById("compare-before-image");
   const compareDividerEl = document.getElementById("compare-divider");
+  const zoomBtn = document.getElementById("zoom-btn");
+  const zoomLightboxEl = document.getElementById("zoom-lightbox");
+  const zoomViewportEl = document.getElementById("zoom-viewport");
+  const zoomImageEl = document.getElementById("zoom-image");
+  const zoomLoadingEl = document.getElementById("zoom-loading");
+  const zoomLevelLabel = document.getElementById("zoom-level-label");
+  const zoomInBtn = document.getElementById("zoom-in-btn");
+  const zoomOutBtn = document.getElementById("zoom-out-btn");
+  const zoomFitBtn = document.getElementById("zoom-reset-fit-btn");
+  const zoomActualSizeBtn = document.getElementById("zoom-reset-100-btn");
+  const zoomCloseBtn = document.getElementById("zoom-close-btn");
   const thumbBoxA = document.getElementById("thumb-box-a");
   const thumbBoxB = document.getElementById("thumb-box-b");
   const thumbAImg = document.getElementById("thumb-a-img");
@@ -55,6 +66,14 @@
   let compareEnabled = false;
   let compareDragging = false;
   let comparePos = 50;
+  let zoomObjectUrl = null;
+  let zoomScale = 1;
+  let zoomFitScale = 1;
+  let zoomPanning = false;
+  let zoomPanStartX = 0;
+  let zoomPanStartY = 0;
+  let zoomScrollStartLeft = 0;
+  let zoomScrollStartTop = 0;
 
   previewImg.addEventListener("load", () => {
     if (previewImg.naturalWidth && previewImg.naturalHeight) {
@@ -128,6 +147,125 @@
 
   window.addEventListener("resize", () => {
     if (compareEnabled) resizeCompareOverlay();
+  });
+
+  function applyZoomScale() {
+    if (!zoomImageEl.naturalWidth) return;
+    zoomImageEl.style.width = Math.round(zoomImageEl.naturalWidth * zoomScale) + "px";
+    zoomImageEl.style.height = Math.round(zoomImageEl.naturalHeight * zoomScale) + "px";
+    zoomLevelLabel.textContent = Math.round(zoomScale * 100) + "%";
+  }
+
+  function setZoomScale(scale) {
+    zoomScale = Math.min(8, Math.max(0.05, scale));
+    applyZoomScale();
+  }
+
+  function centerZoomScroll() {
+    zoomViewportEl.scrollLeft = Math.max(0, (zoomImageEl.offsetWidth - zoomViewportEl.clientWidth) / 2);
+    zoomViewportEl.scrollTop = Math.max(0, (zoomImageEl.offsetHeight - zoomViewportEl.clientHeight) / 2);
+  }
+
+  function openZoom() {
+    const effect = effectsByName[effectSelect.value];
+    if (effect.multi_image && !hasImageB) return;
+
+    zoomLightboxEl.classList.remove("hidden");
+    zoomLoadingEl.classList.remove("hidden");
+    zoomLoadingEl.textContent = "Loading full-resolution image…";
+    zoomImageEl.classList.add("hidden");
+
+    const formData = buildFormData(effect);
+    fetch(`/images/${sessionId}/render`, { method: "POST", body: formData })
+      .then((res) => {
+        if (!res.ok) throw new Error("render failed");
+        return res.blob();
+      })
+      .then((blob) => {
+        if (zoomObjectUrl) URL.revokeObjectURL(zoomObjectUrl);
+        zoomObjectUrl = URL.createObjectURL(blob);
+        zoomImageEl.src = zoomObjectUrl;
+      })
+      .catch((err) => {
+        console.error(err);
+        zoomLoadingEl.textContent = "Failed to load full-resolution image.";
+      });
+  }
+
+  function closeZoom() {
+    zoomLightboxEl.classList.add("hidden");
+    if (zoomObjectUrl) {
+      URL.revokeObjectURL(zoomObjectUrl);
+      zoomObjectUrl = null;
+    }
+    zoomImageEl.removeAttribute("src");
+  }
+
+  zoomImageEl.addEventListener("load", () => {
+    if (!zoomImageEl.naturalWidth || !zoomImageEl.naturalHeight) return;
+    zoomLoadingEl.classList.add("hidden");
+    zoomImageEl.classList.remove("hidden");
+    const vpRect = zoomViewportEl.getBoundingClientRect();
+    zoomFitScale = Math.min(
+      1,
+      (vpRect.width - 32) / zoomImageEl.naturalWidth,
+      (vpRect.height - 32) / zoomImageEl.naturalHeight
+    );
+    if (!(zoomFitScale > 0)) zoomFitScale = 1;
+    zoomScale = zoomFitScale;
+    applyZoomScale();
+    centerZoomScroll();
+  });
+
+  if (zoomBtn) zoomBtn.addEventListener("click", openZoom);
+  if (zoomCloseBtn) zoomCloseBtn.addEventListener("click", closeZoom);
+  if (zoomInBtn) zoomInBtn.addEventListener("click", () => setZoomScale(zoomScale * 1.4));
+  if (zoomOutBtn) zoomOutBtn.addEventListener("click", () => setZoomScale(zoomScale / 1.4));
+  if (zoomFitBtn) {
+    zoomFitBtn.addEventListener("click", () => {
+      setZoomScale(zoomFitScale);
+      centerZoomScroll();
+    });
+  }
+  if (zoomActualSizeBtn) {
+    zoomActualSizeBtn.addEventListener("click", () => {
+      setZoomScale(1);
+      centerZoomScroll();
+    });
+  }
+
+  if (zoomViewportEl) {
+    zoomViewportEl.addEventListener(
+      "wheel",
+      (e) => {
+        if (zoomLightboxEl.classList.contains("hidden")) return;
+        e.preventDefault();
+        setZoomScale(zoomScale * (e.deltaY < 0 ? 1.1 : 0.9));
+      },
+      { passive: false }
+    );
+    zoomViewportEl.addEventListener("mousedown", (e) => {
+      zoomPanning = true;
+      zoomPanStartX = e.clientX;
+      zoomPanStartY = e.clientY;
+      zoomScrollStartLeft = zoomViewportEl.scrollLeft;
+      zoomScrollStartTop = zoomViewportEl.scrollTop;
+      zoomViewportEl.classList.add("dragging");
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!zoomPanning) return;
+      zoomViewportEl.scrollLeft = zoomScrollStartLeft - (e.clientX - zoomPanStartX);
+      zoomViewportEl.scrollTop = zoomScrollStartTop - (e.clientY - zoomPanStartY);
+    });
+    window.addEventListener("mouseup", () => {
+      zoomPanning = false;
+      zoomViewportEl.classList.remove("dragging");
+    });
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && zoomLightboxEl && !zoomLightboxEl.classList.contains("hidden")) closeZoom();
   });
 
   const CATEGORY_ORDER = ["seam_carve", "glitch", "blend", "color", "distort", "video"];
@@ -273,6 +411,7 @@
     maskControlsEl.classList.toggle("hidden", !effect.accepts_mask);
     if (window.MaskEditor) window.MaskEditor.setEnabled(effect.accepts_mask);
     downloadBtn.disabled = needsSecondImage;
+    if (zoomBtn) zoomBtn.disabled = needsSecondImage;
     thumbBoxB.classList.toggle("hidden", !(effect.multi_image && hasImageB));
 
     const canAnimate = !needsSecondImage && animatableParams(effect).length > 0;
