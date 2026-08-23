@@ -6,37 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from . import ffmpeg_wrapper as ffmpeg
-from .frame_io import extract_frames, get_fps, write_frames
-
-
-def _has_audio(path: str) -> bool:
-    try:
-        info = ffmpeg.probe(path)
-    except ffmpeg.FFmpegError:
-        return False
-    return any(s.get("codec_type") == "audio" for s in info.get("streams", []))
-
-
-def _remux_audio(original: str, video_only: str, output: str) -> None:
-    if not _has_audio(original):
-        Path(video_only).replace(output)
-        return
-    try:
-        ffmpeg.run(
-            [
-                "-i", video_only,
-                "-i", original,
-                "-map", "0:v:0",
-                "-map", "1:a:0",
-                "-c:v", "copy",
-                "-c:a", "aac",
-                "-shortest",
-                output,
-            ]
-        )
-    finally:
-        if Path(video_only).exists():
-            Path(video_only).unlink()
+from .frame_io import extract_frames, get_fps, remux_audio, write_frames
 
 
 def frame_blend(input_path: str, output_path: str, trail_length: int = 3, decay: float = 0.6) -> None:
@@ -65,7 +35,7 @@ def frame_blend(input_path: str, output_path: str, trail_length: int = 3, decay:
     with tempfile.TemporaryDirectory() as tmp_dir:
         video_only = str(Path(tmp_dir) / "video_only.mp4")
         write_frames(blended_frames(), video_only, fps)
-        _remux_audio(input_path, video_only, output_path)
+        remux_audio(input_path, video_only, output_path)
 
 
 _VOP_START_CODE = b"\x00\x00\x01\xb6"

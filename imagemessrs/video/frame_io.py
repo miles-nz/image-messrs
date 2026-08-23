@@ -6,6 +6,40 @@ from typing import Iterable, Iterator
 import cv2
 import numpy as np
 
+from . import ffmpeg_wrapper as ffmpeg
+
+
+def has_audio(path: str | Path) -> bool:
+    try:
+        info = ffmpeg.probe(path)
+    except ffmpeg.FFmpegError:
+        return False
+    return any(s.get("codec_type") == "audio" for s in info.get("streams", []))
+
+
+def remux_audio(original: str | Path, video_only: str | Path, output: str | Path) -> None:
+    """Copies the audio track from `original` onto the (silent) `video_only`
+    render. If `original` has no audio, just moves `video_only` into place."""
+    if not has_audio(original):
+        Path(video_only).replace(output)
+        return
+    try:
+        ffmpeg.run(
+            [
+                "-i", str(video_only),
+                "-i", str(original),
+                "-map", "0:v:0",
+                "-map", "1:a:0",
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-shortest",
+                str(output),
+            ]
+        )
+    finally:
+        if Path(video_only).exists():
+            Path(video_only).unlink()
+
 
 def extract_frames(path: str | Path) -> Iterator[np.ndarray]:
     cap = cv2.VideoCapture(str(path))
