@@ -1,37 +1,63 @@
 (function () {
   const techniques = JSON.parse(document.getElementById("techniques-data").textContent);
+  const frameEffectsData = JSON.parse(document.getElementById("frame-effects-data").textContent);
+  const frameEffectsByName = Object.fromEntries(frameEffectsData.map((e) => [e.name, e]));
 
   const editorEl = document.querySelector(".video-editor");
   const sessionId = editorEl.dataset.sessionId;
   const hasMotionClip = editorEl.dataset.hasMotionClip === "true";
+  const thumbnailUrl = document.getElementById("thumbnail").src;
 
   const techniqueSelect = document.getElementById("technique-select");
+  const frameEffectSelectLabel = document.getElementById("frame-effect-select-label");
+  const frameEffectSelect = document.getElementById("frame-effect-select");
   const paramControlsEl = document.getElementById("param-controls");
   const effectAboutEl = document.getElementById("effect-about");
   const motionPromptEl = document.getElementById("motion-clip-prompt");
-  const processBtn = document.getElementById("process-btn");
+  const previewBtn = document.getElementById("preview-btn");
+  const renderBtn = document.getElementById("render-btn");
   const jobStatusEl = document.getElementById("job-status");
   const thumbnail = document.getElementById("thumbnail");
   const resultVideo = document.getElementById("result-video");
   const downloadLink = document.getElementById("download-link");
-  const trimCheckbox = document.getElementById("trim-preview");
+  const framePreviewLoadingEl = document.getElementById("frame-preview-loading");
+  const framePreviewStatusEl = document.getElementById("frame-preview-status");
 
   let pollTimer = null;
+  let framePreviewObjectUrl = null;
+  let frameDebounceTimer = null;
+  let frameRequestSeq = 0;
+  let currentFramePreviewController = null;
 
   function currentSpec() {
     return techniques[techniqueSelect.value];
   }
 
-  function buildControls(spec) {
+  function isFrameBridge(spec) {
+    return !!spec.frame_effect_bridge;
+  }
+
+  function currentFrameEffect() {
+    return frameEffectsByName[frameEffectSelect.value];
+  }
+
+  function populateFrameEffectSelect() {
+    frameEffectSelect.innerHTML = "";
+    frameEffectsData.forEach((effect) => {
+      const opt = document.createElement("option");
+      opt.value = effect.name;
+      opt.textContent = `${effect.label} (${effect.category})`;
+      opt.title = effect.description || "";
+      frameEffectSelect.appendChild(opt);
+    });
+  }
+
+  function buildParamControls(params, onChange) {
     paramControlsEl.innerHTML = "";
 
-    techniqueSelect.title = spec.description || "";
-    Array.from(techniqueSelect.options).forEach((opt) => {
-      const optSpec = techniques[opt.value];
-      if (optSpec) opt.title = optSpec.description || "";
-    });
+    (params || []).forEach((param) => {
+      if (param.kind === "mask") return; // not applicable per-frame
 
-    spec.params.forEach((param) => {
       const wrapper = document.createElement("label");
       wrapper.className = "param-control";
       if (param.description) wrapper.title = param.description;
@@ -41,31 +67,55 @@
       labelText.textContent = param.label;
       wrapper.appendChild(labelText);
 
-      const input = document.createElement("input");
-      input.type = "range";
-      input.min = param.min;
-      input.max = param.max;
-      input.step = param.step;
-      input.value = param.default;
-      input.dataset.paramName = param.name;
-      if (param.description) input.title = param.description;
-
-      const valueLabel = document.createElement("span");
-      valueLabel.className = "param-value";
-      valueLabel.textContent = input.value;
-      input.addEventListener("input", () => {
+      let input;
+      if (param.kind === "float" || param.kind === "int") {
+        input = document.createElement("input");
+        input.type = "range";
+        input.min = param.min ?? 0;
+        input.max = param.max ?? 100;
+        input.step = param.step ?? (param.kind === "int" ? 1 : 0.01);
+        input.value = param.default ?? param.min ?? 0;
+        if (param.description) input.title = param.description;
+        const valueLabel = document.createElement("span");
+        valueLabel.className = "param-value";
         valueLabel.textContent = input.value;
-      });
+        input.addEventListener("input", () => {
+          valueLabel.textContent = input.value;
+          onChange();
+        });
+        wrapper.appendChild(input);
+        wrapper.appendChild(valueLabel);
+      } else if (param.kind === "bool") {
+        input = document.createElement("input");
+        input.type = "checkbox";
+        input.checked = !!param.default;
+        if (param.description) input.title = param.description;
+        input.addEventListener("change", onChange);
+        wrapper.appendChild(input);
+      } else if (param.kind === "choice") {
+        input = document.createElement("select");
+        if (param.description) input.title = param.description;
+        (param.choices || []).forEach((choice) => {
+          const opt = document.createElement("option");
+          opt.value = choice;
+          opt.textContent = choice;
+          if (choice === param.default) opt.selected = true;
+          input.appendChild(opt);
+        });
+        input.addEventListener("change", onChange);
+        wrapper.appendChild(input);
+      } else {
+        return;
+      }
 
-      wrapper.appendChild(input);
-      wrapper.appendChild(valueLabel);
+      input.dataset.paramName = param.name;
       paramControlsEl.appendChild(wrapper);
     });
   }
 
-  function updateAbout(spec) {
+  function updateAbout(about) {
     if (!effectAboutEl) return;
-    const about = spec.about || {};
+    about = about || {};
     effectAboutEl.querySelectorAll("[data-about]").forEach((el) => {
       const text = about[el.dataset.about] || "";
       el.textContent = text;
@@ -74,23 +124,112 @@
     effectAboutEl.classList.toggle("hidden", Object.keys(about).length === 0);
   }
 
-  function updateVisibility(spec) {
-    const needsMotion = spec.needs_motion_clip && !hasMotionClip;
-    motionPromptEl.classList.toggle("hidden", !needsMotion);
-    processBtn.disabled = needsMotion;
+  function currentParamInputs() {
+    return Array.from(paramControlsEl.querySelectorAll("[data-param-name]"));
   }
 
-  function startJob() {
+  function scheduleFramePreview() {
+    if (!isFrameBridge(currentSpec())) return;
+    clearTimeout(frameDebounceTimer);
+    frameDebounceTimer = setTimeout(runFramePreview, 200);
+  }
+
+  function runFramePreview() {
+    const spec = currentSpec();
+    if (!isFrameBridge(spec)) return;
+
+    if (currentFramePreviewController) currentFramePreviewController.abort();
+    const controller = new AbortController();
+    currentFramePreviewController = controller;
+    const seq = ++frameRequestSeq;
+
+    framePreviewStatusEl.textContent = "";
+    framePreviewStatusEl.classList.remove("error");
+    framePreviewLoadingEl.classList.remove("hidden");
+
+    const formData = new FormData();
+    formData.append("frame_effect", frameEffectSelect.value);
+    currentParamInputs().forEach((input) => {
+      const value = input.type === "checkbox" ? (input.checked ? "true" : "false") : input.value;
+      formData.append(input.dataset.paramName, value);
+    });
+
+    fetch(`/video/${sessionId}/frame_preview`, { method: "POST", body: formData, signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("preview failed");
+        return res.blob();
+      })
+      .then((blob) => {
+        if (seq !== frameRequestSeq) return;
+        const url = URL.createObjectURL(blob);
+        const previous = framePreviewObjectUrl;
+        framePreviewObjectUrl = url;
+        thumbnail.src = url;
+        if (previous) URL.revokeObjectURL(previous);
+      })
+      .catch((err) => {
+        if (err.name === "AbortError" || seq !== frameRequestSeq) return;
+        console.error(err);
+        framePreviewStatusEl.textContent = "Preview failed with these settings.";
+        framePreviewStatusEl.classList.add("error");
+      })
+      .finally(() => {
+        if (seq === frameRequestSeq) framePreviewLoadingEl.classList.add("hidden");
+      });
+  }
+
+  function resetToStaticThumbnail() {
+    clearTimeout(frameDebounceTimer);
+    if (currentFramePreviewController) currentFramePreviewController.abort();
+    framePreviewStatusEl.textContent = "";
+    framePreviewStatusEl.classList.remove("error");
+    framePreviewLoadingEl.classList.add("hidden");
+    if (framePreviewObjectUrl) {
+      URL.revokeObjectURL(framePreviewObjectUrl);
+      framePreviewObjectUrl = null;
+    }
+    thumbnail.src = thumbnailUrl;
+  }
+
+  function refreshControlsAndAbout() {
+    const spec = currentSpec();
+    if (isFrameBridge(spec)) {
+      const effect = currentFrameEffect();
+      buildParamControls(effect ? effect.params : [], scheduleFramePreview);
+      updateAbout(effect ? effect.about : spec.about);
+      runFramePreview();
+    } else {
+      buildParamControls(spec.params, () => {});
+      updateAbout(spec.about);
+      resetToStaticThumbnail();
+    }
+  }
+
+  function updateVisibility(spec) {
+    frameEffectSelectLabel.classList.toggle("hidden", !isFrameBridge(spec));
+    const needsMotion = spec.needs_motion_clip && !hasMotionClip;
+    motionPromptEl.classList.toggle("hidden", !needsMotion);
+    previewBtn.disabled = needsMotion;
+    renderBtn.disabled = needsMotion;
+  }
+
+  function startJob(trim) {
     const spec = currentSpec();
     const formData = new FormData();
     formData.append("technique", techniqueSelect.value);
-    formData.append("trim_preview", trimCheckbox.checked ? "true" : "false");
-    paramControlsEl.querySelectorAll("[data-param-name]").forEach((input) => {
-      formData.append(input.dataset.paramName, input.value);
+    if (isFrameBridge(spec)) {
+      formData.append("frame_effect", frameEffectSelect.value);
+    }
+    formData.append("trim_preview", trim ? "true" : "false");
+    currentParamInputs().forEach((input) => {
+      const value = input.type === "checkbox" ? (input.checked ? "true" : "false") : input.value;
+      formData.append(input.dataset.paramName, value);
     });
 
-    processBtn.disabled = true;
-    jobStatusEl.textContent = "Starting…";
+    previewBtn.disabled = true;
+    renderBtn.disabled = true;
+    jobStatusEl.textContent = trim ? "Starting preview…" : "Starting full render…";
+    jobStatusEl.classList.remove("error");
     resultVideo.classList.add("hidden");
     downloadLink.classList.add("hidden");
     thumbnail.classList.remove("hidden");
@@ -103,7 +242,10 @@
       .then(({ job_id }) => pollJob(job_id))
       .catch((err) => {
         jobStatusEl.textContent = "Failed to start: " + err.message;
-        processBtn.disabled = spec.needs_motion_clip && !hasMotionClip;
+        jobStatusEl.classList.add("error");
+        const needsMotion = spec.needs_motion_clip && !hasMotionClip;
+        previewBtn.disabled = needsMotion;
+        renderBtn.disabled = needsMotion;
       });
   }
 
@@ -119,7 +261,8 @@
           } else if (data.status === "done") {
             clearInterval(pollTimer);
             jobStatusEl.textContent = "Done.";
-            processBtn.disabled = false;
+            previewBtn.disabled = false;
+            renderBtn.disabled = false;
             const url = `/video/${sessionId}/jobs/${jobId}/result`;
             resultVideo.src = url;
             resultVideo.classList.remove("hidden");
@@ -129,24 +272,29 @@
           } else if (data.status === "error") {
             clearInterval(pollTimer);
             jobStatusEl.textContent = "Error: " + (data.error || "unknown error");
-            processBtn.disabled = false;
+            jobStatusEl.classList.add("error");
+            previewBtn.disabled = false;
+            renderBtn.disabled = false;
           }
         })
         .catch(() => {
           clearInterval(pollTimer);
           jobStatusEl.textContent = "Lost connection to job status.";
-          processBtn.disabled = false;
+          jobStatusEl.classList.add("error");
+          previewBtn.disabled = false;
+          renderBtn.disabled = false;
         });
     }, 1000);
   }
 
   techniqueSelect.addEventListener("change", () => {
     const spec = currentSpec();
-    buildControls(spec);
-    updateAbout(spec);
     updateVisibility(spec);
+    refreshControlsAndAbout();
   });
-  processBtn.addEventListener("click", startJob);
+  frameEffectSelect.addEventListener("change", refreshControlsAndAbout);
+  previewBtn.addEventListener("click", () => startJob(true));
+  renderBtn.addEventListener("click", () => startJob(false));
 
   if (window.confirmBeforeNav) {
     const abandonMessage = "You'll lose this editing session and any results you haven't downloaded. Continue?";
@@ -154,7 +302,7 @@
     window.confirmBeforeNav(document.getElementById("new-upload-link"), abandonMessage);
   }
 
-  buildControls(currentSpec());
-  updateAbout(currentSpec());
+  populateFrameEffectSelect();
   updateVisibility(currentSpec());
+  refreshControlsAndAbout();
 })();

@@ -12,6 +12,7 @@ class ImageSession:
     id: str
     original: np.ndarray
     original_b: np.ndarray | None = None
+    suggested_source_camera: str | None = None
 
 
 class ImageStore:
@@ -22,10 +23,14 @@ class ImageStore:
         self._sessions: dict[str, ImageSession] = {}
         self._lock = Lock()
 
-    def create(self, original: np.ndarray) -> str:
+    def create(self, original: np.ndarray, suggested_source_camera: str | None = None) -> str:
         session_id = uuid.uuid4().hex
         with self._lock:
-            self._sessions[session_id] = ImageSession(id=session_id, original=original)
+            self._sessions[session_id] = ImageSession(
+                id=session_id,
+                original=original,
+                suggested_source_camera=suggested_source_camera,
+            )
         return session_id
 
     def get(self, session_id: str) -> ImageSession | None:
@@ -43,6 +48,16 @@ class ImageStore:
             session = self._sessions.get(session_id)
             if session is not None:
                 session.original_b = image_b
+
+    def swap(self, session_id: str) -> bool:
+        """Swaps photos A and B in place. Returns False (no-op) if the
+        session doesn't exist or doesn't have a second photo to swap in."""
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None or session.original_b is None:
+                return False
+            session.original, session.original_b = session.original_b, session.original
+            return True
 
 
 IMAGE_STORE = ImageStore()

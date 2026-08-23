@@ -4,6 +4,7 @@
     class="editor"
     data-session-id="{{ session_id }}"
     data-has-image-b="{{ 'true' if has_image_b else 'false' }}"
+    data-suggested-source-camera="{{ suggested_source_camera }}"
 >
     <div class="editor-toolbar">
         <a id="new-upload-link" href="{{ url_for('images.index') }}"
@@ -26,6 +27,14 @@
                         <input type="file" id="thumb-a-input" accept="image/*" />
                     </label>
                 </div>
+                <button
+                    type="button"
+                    id="swap-photos-btn"
+                    class="swap-photos-btn hidden"
+                    title="Swap photos A and B"
+                >
+                    ⇅
+                </button>
                 <div class="thumb-box hidden" id="thumb-box-b">
                     <img
                         id="thumb-b-img"
@@ -69,11 +78,12 @@
         <div id="second-image-prompt" class="hidden">
             <p>This effect blends two images - upload a second one:</p>
             <form
+                id="second-image-form"
                 action="{{ url_for('images.upload_second', session_id=session_id) }}"
                 method="post"
                 enctype="multipart/form-data"
             >
-                <input type="file" name="image_b" accept="image/*" required />
+                <input type="file" id="second-image-input" name="image_b" accept="image/*" required />
                 <button type="submit">Upload second image</button>
             </form>
         </div>
@@ -81,14 +91,16 @@
 
     <div class="controls-pane">
         <label class="effect-select-label">
-            Effect
-            <select id="effect-select">
-                {% for effect in effects %}
-                <option value="{{ effect.name }}">
-                    {{ effect.label }} ({{ effect.category }})
-                </option>
-                {% endfor %}
+            Effect Type
+            <select id="mode-select">
+                <option value="single">Single Image</option>
+                <option value="multi">Multi Image (Blend)</option>
             </select>
+        </label>
+
+        <label class="effect-select-label">
+            Effect
+            <select id="effect-select"></select>
         </label>
 
         <details id="effect-about" class="effect-about">
@@ -101,14 +113,54 @@
             </div>
         </details>
 
-        <label id="swap-images-control" class="checkbox-row hidden">
-            <input type="checkbox" id="swap-images" />
-            Swap photos (B affects A instead of A affects B)
-        </label>
-
         <div id="param-controls"></div>
 
         <button type="button" id="download-btn">Download full-res</button>
+
+        <details id="animate-panel" class="effect-about hidden">
+            <summary>Animate</summary>
+            <div class="effect-about-body">
+                <label class="param-control">
+                    <span class="param-label">Parameter</span>
+                    <select id="animate-param-select"></select>
+                </label>
+                <label class="param-control">
+                    <span class="param-label">Start</span>
+                    <input type="number" id="animate-start" step="any" />
+                </label>
+                <label class="param-control">
+                    <span class="param-label">End</span>
+                    <input type="number" id="animate-end" step="any" />
+                </label>
+                <label class="param-control">
+                    <span class="param-label">Duration (s)</span>
+                    <input type="number" id="animate-duration" min="0.5" max="6" step="0.5" value="3" />
+                </label>
+                <label class="param-control">
+                    <span class="param-label">FPS</span>
+                    <input type="number" id="animate-fps" min="1" max="24" step="1" value="15" />
+                </label>
+                <label class="param-control">
+                    <span class="param-label">Loop Style</span>
+                    <select id="animate-loop-style">
+                        <option value="ramp">Ramp (start &rarr; end)</option>
+                        <option value="ping_pong">Ping-pong (loop)</option>
+                    </select>
+                </label>
+                <label id="animate-seed-row" class="checkbox-row hidden">
+                    <input type="checkbox" id="animate-vary-seed" />
+                    Vary seed per frame (flicker instead of static texture)
+                </label>
+                <label class="checkbox-row">
+                    <input type="checkbox" id="animate-full-res" />
+                    Render at full resolution (slower)
+                </label>
+                <button type="button" id="animate-generate-btn">Generate Animation</button>
+                <div id="animate-status" class="job-status"></div>
+                <video id="animate-result-video" class="hidden" controls></video>
+                <a id="animate-download-link" class="hidden" download="image-messrs-animation.mp4">Download animation</a>
+            </div>
+        </details>
     </div>
 </div>
 

@@ -88,6 +88,26 @@ button:hover:not(:disabled) {
   filter: brightness(1.1);
 }
 
+button.secondary {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+button.secondary:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--accent);
+}
+
+.action-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.action-row button {
+  flex: 1 1 0;
+}
+
 .editor {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
@@ -196,6 +216,28 @@ button:hover:not(:disabled) {
   cursor: pointer;
 }
 
+.swap-photos-btn {
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.swap-photos-btn:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .thumb-box.uploading::after {
   content: "";
   position: absolute;
@@ -301,12 +343,17 @@ button:hover:not(:disabled) {
 }
 
 select,
-input[type="file"] {
+input[type="file"],
+input[type="number"] {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.4rem;
+}
+
+input[type="number"] {
+  width: 6ch;
 }
 
 input[type="range"] {
@@ -452,7 +499,8 @@ input[type="range"] {
 }
 
 #thumbnail,
-#result-video {
+#result-video,
+#animate-result-video {
   max-width: 100%;
   display: block;
   border-radius: 4px;
@@ -490,6 +538,10 @@ input[type="range"] {
   color: var(--muted);
   font-size: 0.85rem;
   min-height: 1.2em;
+}
+
+.job-status.error {
+  color: var(--danger);
 }
 
 #download-link {

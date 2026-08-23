@@ -5,7 +5,9 @@
   const editorEl = document.querySelector(".editor");
   const sessionId = editorEl.dataset.sessionId;
   let hasImageB = editorEl.dataset.hasImageB === "true";
+  const suggestedSourceCamera = editorEl.dataset.suggestedSourceCamera || "";
 
+  const modeSelect = document.getElementById("mode-select");
   const effectSelect = document.getElementById("effect-select");
   const paramControlsEl = document.getElementById("param-controls");
   const effectAboutEl = document.getElementById("effect-about");
@@ -15,8 +17,8 @@
   const previewStatusEl = document.getElementById("preview-status");
   const maskControlsEl = document.getElementById("mask-controls");
   const secondImagePromptEl = document.getElementById("second-image-prompt");
-  const swapControlEl = document.getElementById("swap-images-control");
-  const swapCheckbox = document.getElementById("swap-images");
+  const secondImageFormEl = document.getElementById("second-image-form");
+  const secondImageInputEl = document.getElementById("second-image-input");
   const downloadBtn = document.getElementById("download-btn");
   const thumbBoxA = document.getElementById("thumb-box-a");
   const thumbBoxB = document.getElementById("thumb-box-b");
@@ -24,17 +26,48 @@
   const thumbBImg = document.getElementById("thumb-b-img");
   const thumbAInput = document.getElementById("thumb-a-input");
   const thumbBInput = document.getElementById("thumb-b-input");
+  const swapPhotosBtn = document.getElementById("swap-photos-btn");
+  const animatePanelEl = document.getElementById("animate-panel");
+  const animateParamSelect = document.getElementById("animate-param-select");
+  const animateStartInput = document.getElementById("animate-start");
+  const animateEndInput = document.getElementById("animate-end");
+  const animateDurationInput = document.getElementById("animate-duration");
+  const animateFpsInput = document.getElementById("animate-fps");
+  const animateLoopStyleSelect = document.getElementById("animate-loop-style");
+  const animateSeedRowEl = document.getElementById("animate-seed-row");
+  const animateVarySeedCheckbox = document.getElementById("animate-vary-seed");
+  const animateFullResCheckbox = document.getElementById("animate-full-res");
+  const animateGenerateBtn = document.getElementById("animate-generate-btn");
+  const animateStatusEl = document.getElementById("animate-status");
+  const animateResultVideo = document.getElementById("animate-result-video");
+  const animateDownloadLink = document.getElementById("animate-download-link");
 
   let currentObjectUrl = null;
   let debounceTimer = null;
   let previewRequestSeq = 0;
   let currentPreviewController = null;
+  let animatePollTimer = null;
 
   previewImg.addEventListener("load", () => {
     if (previewImg.naturalWidth && previewImg.naturalHeight) {
       previewDimsEl.textContent = `${previewImg.naturalWidth} × ${previewImg.naturalHeight}px`;
     }
   });
+
+  function effectsForMode(mode) {
+    return effectsData.filter((e) => e.multi_image === (mode === "multi"));
+  }
+
+  function populateEffectSelect(mode) {
+    effectSelect.innerHTML = "";
+    effectsForMode(mode).forEach((effect) => {
+      const opt = document.createElement("option");
+      opt.value = effect.name;
+      opt.textContent = `${effect.label} (${effect.category})`;
+      opt.title = effect.description || "";
+      effectSelect.appendChild(opt);
+    });
+  }
 
   function buildControlsForEffect(effect) {
     paramControlsEl.innerHTML = "";
@@ -85,11 +118,17 @@
       } else if (param.kind === "choice") {
         input = document.createElement("select");
         if (param.description) input.title = param.description;
+        const preselect =
+          effect.name === "vintage_camera_profile" &&
+          param.name === "source_camera" &&
+          (param.choices || []).includes(suggestedSourceCamera)
+            ? suggestedSourceCamera
+            : param.default;
         (param.choices || []).forEach((choice) => {
           const opt = document.createElement("option");
           opt.value = choice;
           opt.textContent = choice;
-          if (choice === param.default) opt.selected = true;
+          if (choice === preselect) opt.selected = true;
           input.appendChild(opt);
         });
         input.addEventListener("change", schedulePreview);
@@ -129,20 +168,79 @@
       const maskDataUrl = window.MaskEditor.getDataURL();
       if (maskDataUrl) formData.append("mask", maskDataUrl);
     }
-    if (effect.multi_image) {
-      formData.append("swap_images", swapCheckbox.checked ? "true" : "false");
-    }
     return formData;
   }
 
   function updateVisibility(effect) {
     const needsSecondImage = effect.multi_image && !hasImageB;
     secondImagePromptEl.classList.toggle("hidden", !needsSecondImage);
-    swapControlEl.classList.toggle("hidden", !(effect.multi_image && hasImageB));
+    swapPhotosBtn.classList.toggle("hidden", !hasImageB);
     maskControlsEl.classList.toggle("hidden", !effect.accepts_mask);
     if (window.MaskEditor) window.MaskEditor.setEnabled(effect.accepts_mask);
     downloadBtn.disabled = needsSecondImage;
     thumbBoxB.classList.toggle("hidden", !(effect.multi_image && hasImageB));
+
+    const canAnimate = !needsSecondImage && animatableParams(effect).length > 0;
+    animatePanelEl.classList.toggle("hidden", !canAnimate);
+    if (canAnimate) populateAnimateParamSelect(effect);
+  }
+
+  function animatableParams(effect) {
+    return effect.params.filter((p) => (p.kind === "float" || p.kind === "int") && p.min != null && p.max != null);
+  }
+
+  function seedParamFor(effect) {
+    return effect.params.find((p) => p.name === "seed" && p.kind === "int") || null;
+  }
+
+  function populateAnimateParamSelect(effect) {
+    animateParamSelect.innerHTML = "";
+    animatableParams(effect).forEach((param) => {
+      const opt = document.createElement("option");
+      opt.value = param.name;
+      opt.textContent = param.label;
+      opt.title = param.description || "";
+      animateParamSelect.appendChild(opt);
+    });
+    updateAnimateRangeDefaults(effect);
+    updateAnimateSeedRow(effect);
+  }
+
+  function updateAnimateRangeDefaults(effect) {
+    const param = animatableParams(effect).find((p) => p.name === animateParamSelect.value);
+    if (!param) return;
+    animateStartInput.value = param.min;
+    animateEndInput.value = param.max;
+  }
+
+  function updateAnimateSeedRow(effect) {
+    const seedParam = seedParamFor(effect);
+    const showSeedRow = !!seedParam && seedParam.name !== animateParamSelect.value;
+    animateSeedRowEl.classList.toggle("hidden", !showSeedRow);
+    if (!showSeedRow) animateVarySeedCheckbox.checked = false;
+  }
+
+  function swapPhotos() {
+    swapPhotosBtn.disabled = true;
+    fetch(`/images/${sessionId}/swap`, { method: "POST" })
+      .then((res) => {
+        if (!res.ok) throw new Error("swap failed");
+        return res.json();
+      })
+      .then(() => {
+        const t = Date.now();
+        thumbAImg.src = `/images/${sessionId}/thumbnail/a?t=${t}`;
+        thumbBImg.src = `/images/${sessionId}/thumbnail/b?t=${t}`;
+        runPreview();
+      })
+      .catch((err) => {
+        console.error(err);
+        previewStatusEl.textContent = "Failed to swap photos.";
+        previewStatusEl.classList.add("error");
+      })
+      .finally(() => {
+        swapPhotosBtn.disabled = false;
+      });
   }
 
   function replaceImage(slot, file) {
@@ -240,15 +338,95 @@
       .catch((err) => console.error(err));
   }
 
-  effectSelect.addEventListener("change", () => {
+  function startAnimateJob() {
+    const effect = effectsByName[effectSelect.value];
+    const formData = buildFormData(effect);
+    formData.append("sweep_param", animateParamSelect.value);
+    formData.append("sweep_start", animateStartInput.value);
+    formData.append("sweep_end", animateEndInput.value);
+    formData.append("duration", animateDurationInput.value);
+    formData.append("fps", animateFpsInput.value);
+    formData.append("loop_style", animateLoopStyleSelect.value);
+    formData.append("full_res", animateFullResCheckbox.checked ? "true" : "false");
+    if (!animateSeedRowEl.classList.contains("hidden") && animateVarySeedCheckbox.checked) {
+      const seedParam = seedParamFor(effect);
+      if (seedParam) formData.append("seed_param", seedParam.name);
+    }
+
+    animateGenerateBtn.disabled = true;
+    animateStatusEl.textContent = "Starting…";
+    animateStatusEl.classList.remove("error");
+    animateResultVideo.classList.add("hidden");
+    animateDownloadLink.classList.add("hidden");
+
+    fetch(`/images/${sessionId}/animate`, { method: "POST", body: formData })
+      .then((res) => {
+        if (!res.ok) return res.text().then((text) => Promise.reject(new Error(text)));
+        return res.json();
+      })
+      .then(({ job_id }) => pollAnimateJob(job_id))
+      .catch((err) => {
+        animateStatusEl.textContent = "Failed to start: " + err.message;
+        animateStatusEl.classList.add("error");
+        animateGenerateBtn.disabled = false;
+      });
+  }
+
+  function pollAnimateJob(jobId) {
+    clearInterval(animatePollTimer);
+    animatePollTimer = setInterval(() => {
+      fetch(`/images/${sessionId}/animate/jobs/${jobId}/status`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.status === "running" || data.status === "pending") {
+            const frame = data.progress && data.progress.frame;
+            animateStatusEl.textContent = frame ? `Rendering… frame ${frame}` : "Rendering…";
+          } else if (data.status === "done") {
+            clearInterval(animatePollTimer);
+            animateStatusEl.textContent = "Done.";
+            animateGenerateBtn.disabled = false;
+            const url = `/images/${sessionId}/animate/jobs/${jobId}/result`;
+            animateResultVideo.src = url;
+            animateResultVideo.classList.remove("hidden");
+            animateDownloadLink.href = url;
+            animateDownloadLink.classList.remove("hidden");
+          } else if (data.status === "error") {
+            clearInterval(animatePollTimer);
+            animateStatusEl.textContent = "Error: " + (data.error || "unknown error");
+            animateStatusEl.classList.add("error");
+            animateGenerateBtn.disabled = false;
+          }
+        })
+        .catch(() => {
+          clearInterval(animatePollTimer);
+          animateStatusEl.textContent = "Lost connection to job status.";
+          animateStatusEl.classList.add("error");
+          animateGenerateBtn.disabled = false;
+        });
+    }, 1000);
+  }
+
+  function selectEffectChanged() {
     const effect = effectsByName[effectSelect.value];
     buildControlsForEffect(effect);
     updateEffectAbout(effect);
     updateVisibility(effect);
     runPreview();
+  }
+
+  modeSelect.addEventListener("change", () => {
+    populateEffectSelect(modeSelect.value);
+    selectEffectChanged();
   });
+  effectSelect.addEventListener("change", selectEffectChanged);
   downloadBtn.addEventListener("click", downloadFullRes);
-  swapCheckbox.addEventListener("change", schedulePreview);
+  swapPhotosBtn.addEventListener("click", swapPhotos);
+  animateParamSelect.addEventListener("change", () => {
+    const effect = effectsByName[effectSelect.value];
+    updateAnimateRangeDefaults(effect);
+    updateAnimateSeedRow(effect);
+  });
+  animateGenerateBtn.addEventListener("click", startAnimateJob);
   window.addEventListener("mask-updated", schedulePreview);
   thumbAInput.addEventListener("change", () => {
     const file = thumbAInput.files[0];
@@ -260,12 +438,23 @@
     if (file) replaceImage("b", file);
     thumbBInput.value = "";
   });
+  secondImageFormEl.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const file = secondImageInputEl.files[0];
+    if (file) replaceImage("b", file);
+    secondImageInputEl.value = "";
+  });
 
   if (window.confirmBeforeNav) {
     const abandonMessage = "You'll lose this editing session and any effect settings you've configured. Continue?";
     window.confirmBeforeNav(document.getElementById("home-link"), abandonMessage);
     window.confirmBeforeNav(document.getElementById("new-upload-link"), abandonMessage);
   }
+
+  // If both photos were already uploaded up front, default to browsing
+  // blend effects rather than making the user flip the selector themselves.
+  modeSelect.value = hasImageB ? "multi" : "single";
+  populateEffectSelect(modeSelect.value);
 
   const initialEffect = effectsByName[effectSelect.value];
   buildControlsForEffect(initialEffect);

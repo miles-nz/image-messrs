@@ -19,7 +19,9 @@ endblock %} {% block content %}
                 alt="first frame"
             />
             <video id="result-video" class="hidden" controls></video>
+            <div id="frame-preview-loading" class="preview-loading hidden">Updating preview&hellip;</div>
         </div>
+        <p id="frame-preview-status" class="job-status"></p>
 
         <dl class="video-meta">
             <dt>Duration</dt>
@@ -33,7 +35,7 @@ endblock %} {% block content %}
         </dl>
 
         <div id="motion-clip-prompt" class="hidden">
-            <p>I-Frame Smear needs a second "motion" clip:</p>
+            <p>Datamosh (I-Frame Smear) needs a second "motion" clip:</p>
             <form
                 action="{{ url_for('video.upload_motion', session_id=session_id) }}"
                 method="post"
@@ -64,6 +66,11 @@ endblock %} {% block content %}
             </select>
         </label>
 
+        <label id="frame-effect-select-label" class="effect-select-label hidden">
+            Image Effect
+            <select id="frame-effect-select"></select>
+        </label>
+
         <details id="effect-about" class="effect-about">
             <summary>About this technique</summary>
             <div class="effect-about-body">
@@ -76,18 +83,19 @@ endblock %} {% block content %}
 
         <div id="param-controls"></div>
 
-        <label class="checkbox-row">
-            <input type="checkbox" id="trim-preview" checked />
-            Preview first 3s only (faster iteration)
-        </label>
-
-        <button type="button" id="process-btn">Run</button>
+        <div class="action-row">
+            <button type="button" id="preview-btn" class="secondary">Preview (first 3s)</button>
+            <button type="button" id="render-btn">Render Full Video</button>
+        </div>
         <div id="job-status" class="job-status"></div>
     </div>
 </div>
 
 <script type="application/json" id="techniques-data">
     {{ techniques_json | safe }}
+</script>
+<script type="application/json" id="frame-effects-data">
+    {{ frame_effects_json | safe }}
 </script>
 {% endblock %} {% block scripts %}
 <script src="{{ url_for('static', filename='js/confirm-modal.js') }}"></script>
