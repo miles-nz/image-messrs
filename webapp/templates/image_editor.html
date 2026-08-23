@@ -54,6 +54,28 @@
                     src="{{ url_for('images.original', session_id=session_id) }}"
                     alt="preview"
                 />
+                <button
+                    type="button"
+                    id="compare-toggle-btn"
+                    class="compare-toggle-btn hidden"
+                    title="Compare with original"
+                >
+                    Compare
+                </button>
+                <div id="compare-overlay" class="compare-overlay hidden">
+                    <div id="compare-before-wrap" class="compare-before-wrap">
+                        <img
+                            id="compare-before-image"
+                            src="{{ url_for('images.original', session_id=session_id) }}"
+                            alt="Original, before the effect"
+                        />
+                    </div>
+                    <div id="compare-divider" class="compare-divider">
+                        <span class="compare-divider-handle" aria-hidden="true">&harr;</span>
+                    </div>
+                    <span class="compare-tag compare-tag-before">Before</span>
+                    <span class="compare-tag compare-tag-after">After</span>
+                </div>
                 <canvas id="mask-canvas" class="hidden"></canvas>
                 <div id="preview-loading" class="preview-loading hidden">Rendering preview&hellip;</div>
             </div>

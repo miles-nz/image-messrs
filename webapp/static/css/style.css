@@ -272,6 +272,104 @@ button.secondary:hover:not(:disabled) {
   border-radius: 4px;
 }
 
+.compare-toggle-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 5;
+  background: rgba(20, 21, 26, 0.75);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+}
+
+.compare-toggle-btn:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.compare-toggle-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.compare-overlay {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.compare-before-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px 0 0 4px;
+}
+
+.compare-before-wrap img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  max-width: none;
+}
+
+.compare-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  transform: translateX(-1px);
+  pointer-events: auto;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compare-divider-handle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.compare-tag {
+  position: absolute;
+  bottom: 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.compare-tag-before {
+  left: 0.5rem;
+}
+
+.compare-tag-after {
+  right: 0.5rem;
+}
+
 .preview-loading {
   position: absolute;
   inset: 0;

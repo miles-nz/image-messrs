@@ -20,6 +20,11 @@
   const secondImageFormEl = document.getElementById("second-image-form");
   const secondImageInputEl = document.getElementById("second-image-input");
   const downloadBtn = document.getElementById("download-btn");
+  const compareToggleBtn = document.getElementById("compare-toggle-btn");
+  const compareOverlayEl = document.getElementById("compare-overlay");
+  const compareBeforeWrapEl = document.getElementById("compare-before-wrap");
+  const compareBeforeImg = document.getElementById("compare-before-image");
+  const compareDividerEl = document.getElementById("compare-divider");
   const thumbBoxA = document.getElementById("thumb-box-a");
   const thumbBoxB = document.getElementById("thumb-box-b");
   const thumbAImg = document.getElementById("thumb-a-img");
@@ -47,11 +52,82 @@
   let previewRequestSeq = 0;
   let currentPreviewController = null;
   let animatePollTimer = null;
+  let compareEnabled = false;
+  let compareDragging = false;
+  let comparePos = 50;
 
   previewImg.addEventListener("load", () => {
     if (previewImg.naturalWidth && previewImg.naturalHeight) {
       previewDimsEl.textContent = `${previewImg.naturalWidth} × ${previewImg.naturalHeight}px`;
     }
+    if (compareEnabled) resizeCompareOverlay();
+  });
+
+  function applyComparePos() {
+    if (!compareOverlayEl) return;
+    compareBeforeWrapEl.style.width = comparePos + "%";
+    compareDividerEl.style.left = comparePos + "%";
+  }
+
+  function resizeCompareOverlay() {
+    if (!compareOverlayEl) return;
+    const rect = previewImg.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    compareOverlayEl.style.left = previewImg.offsetLeft + "px";
+    compareOverlayEl.style.top = previewImg.offsetTop + "px";
+    compareOverlayEl.style.width = rect.width + "px";
+    compareOverlayEl.style.height = rect.height + "px";
+    compareBeforeImg.style.width = rect.width + "px";
+    compareBeforeImg.style.height = rect.height + "px";
+    applyComparePos();
+  }
+
+  function setComparePosFromClientX(clientX) {
+    const rect = compareOverlayEl.getBoundingClientRect();
+    if (!rect.width) return;
+    comparePos = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+    applyComparePos();
+  }
+
+  function setCompareEnabled(value) {
+    compareEnabled = value;
+    compareOverlayEl.classList.toggle("hidden", !value);
+    compareToggleBtn.classList.toggle("active", value);
+    if (value) resizeCompareOverlay();
+  }
+
+  function refreshCompareBeforeImage() {
+    compareBeforeImg.src = `/images/${sessionId}/original?t=${Date.now()}`;
+  }
+
+  if (compareToggleBtn) {
+    compareToggleBtn.addEventListener("click", () => setCompareEnabled(!compareEnabled));
+  }
+
+  if (compareDividerEl) {
+    compareDividerEl.addEventListener("mousedown", (e) => {
+      compareDragging = true;
+      e.preventDefault();
+    });
+    compareDividerEl.addEventListener("touchstart", () => { compareDragging = true; }, { passive: true });
+    window.addEventListener("mousemove", (e) => {
+      if (!compareDragging) return;
+      setComparePosFromClientX(e.clientX);
+    });
+    window.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!compareDragging) return;
+        setComparePosFromClientX(e.touches[0].clientX);
+      },
+      { passive: true }
+    );
+    window.addEventListener("mouseup", () => { compareDragging = false; });
+    window.addEventListener("touchend", () => { compareDragging = false; });
+  }
+
+  window.addEventListener("resize", () => {
+    if (compareEnabled) resizeCompareOverlay();
   });
 
   const CATEGORY_ORDER = ["seam_carve", "glitch", "blend", "color", "distort", "video"];
@@ -202,6 +278,12 @@
     const canAnimate = !needsSecondImage && animatableParams(effect).length > 0;
     animatePanelEl.classList.toggle("hidden", !canAnimate);
     if (canAnimate) populateAnimateParamSelect(effect);
+
+    if (compareToggleBtn) {
+      const compareAllowed = !effect.accepts_mask;
+      compareToggleBtn.classList.toggle("hidden", !compareAllowed);
+      if (!compareAllowed) setCompareEnabled(false);
+    }
   }
 
   function animatableParams(effect) {
@@ -250,6 +332,7 @@
         const t = Date.now();
         thumbAImg.src = `/images/${sessionId}/thumbnail/a?t=${t}`;
         thumbBImg.src = `/images/${sessionId}/thumbnail/b?t=${t}`;
+        refreshCompareBeforeImage();
         runPreview();
       })
       .catch((err) => {
@@ -276,6 +359,7 @@
       })
       .then(() => {
         img.src = `/images/${sessionId}/thumbnail/${slot}?t=${Date.now()}`;
+        if (slot === "a") refreshCompareBeforeImage();
         if (slot === "b") {
           hasImageB = true;
           updateVisibility(effectsByName[effectSelect.value]);
