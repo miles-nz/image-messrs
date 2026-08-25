@@ -32,7 +32,12 @@ def _sort_key(pixels: np.ndarray, sort_by: str) -> np.ndarray:
 
 
 def _sort_line(
-    line: np.ndarray, sort_by: str, threshold_low: float, threshold_high: float, reverse: bool
+    line: np.ndarray,
+    sort_by: str,
+    threshold_low: float,
+    threshold_high: float,
+    reverse: bool,
+    protect_line: np.ndarray | None = None,
 ) -> np.ndarray:
     brightness = (
         0.299 * line[:, 0].astype(np.float32)
@@ -40,6 +45,8 @@ def _sort_line(
         + 0.114 * line[:, 2].astype(np.float32)
     )
     mask = (brightness >= threshold_low) & (brightness <= threshold_high)
+    if protect_line is not None:
+        mask = mask & ~protect_line
 
     out = line.copy()
     n = len(line)
@@ -66,6 +73,7 @@ def _sort_line(
     name="pixel_sort",
     label="Pixel Sort",
     category="glitch",
+    accepts_mask=True,
     description="Sorts runs of pixels along each row or column by brightness, hue, or saturation. Pixels outside the threshold range act as anchors and stay put, creating streaks between them.",
     about={
         "what": "Sorts runs of pixels along each row or column by brightness, hue, or saturation, leaving pixels outside a threshold range untouched so they act as anchors that break the sorted runs into streaks.",
@@ -94,6 +102,10 @@ def _sort_line(
             name="reverse", kind="bool", default=False,
             description="Sort each run high-to-low instead of low-to-high.",
         ),
+        ParamSpec(
+            name="protect_mask", kind="mask", default=None, label="Protected Region",
+            description="Paint over an area (e.g. a face or subject) to keep its pixels from being swept into sorted streaks.",
+        ),
     ],
 )
 def apply(
@@ -103,9 +115,14 @@ def apply(
     threshold_low: float = 50.0,
     threshold_high: float = 200.0,
     reverse: bool = False,
+    protect_mask: np.ndarray | None = None,
 ) -> ImageArray:
     work = image if axis == "rows" else np.transpose(image, (1, 0, 2))
+    mask_work = None
+    if protect_mask is not None:
+        mask_work = protect_mask.astype(bool) if axis == "rows" else protect_mask.astype(bool).T
     out = np.empty_like(work)
     for idx in range(work.shape[0]):
-        out[idx] = _sort_line(work[idx], sort_by, threshold_low, threshold_high, reverse)
+        protect_line = mask_work[idx] if mask_work is not None else None
+        out[idx] = _sort_line(work[idx], sort_by, threshold_low, threshold_high, reverse, protect_line)
     return out if axis == "rows" else np.transpose(out, (1, 0, 2)).copy()
