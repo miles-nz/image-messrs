@@ -8,11 +8,25 @@
 </head>
 <body>
   <header class="site-header">
-    <a id="home-link" href="{{ url_for('root') }}">image messrs</a>
+    <div class="site-header-brand">
+      {% block header_content %}
+      <a id="home-link" href="{{ url_for('root') }}">image messrs</a>
+      {% endblock %}
+    </div>
+    <nav class="site-header-nav">
+      <a id="nav-image-link" href="{{ url_for('images.index') }}" class="site-nav-link" aria-label="Image">
+        <canvas class="fuzzy-text-canvas" data-fuzzy-text="Image"></canvas>
+      </a>
+      <a id="nav-video-link" href="{{ url_for('video.index') }}" class="site-nav-link" aria-label="Video">
+        <canvas class="fuzzy-text-canvas" data-fuzzy-text="Video"></canvas>
+      </a>
+    </nav>
   </header>
   <main>
     {% block content %}{% endblock %}
   </main>
+  <script src="{{ url_for('static', filename='js/fuzzy-text.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/warp-text.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

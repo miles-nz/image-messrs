@@ -300,6 +300,8 @@
     const abandonMessage = "You'll lose this editing session and any results you haven't downloaded. Continue?";
     window.confirmBeforeNav(document.getElementById("home-link"), abandonMessage);
     window.confirmBeforeNav(document.getElementById("new-upload-link"), abandonMessage);
+    window.confirmBeforeNav(document.getElementById("nav-image-link"), abandonMessage);
+    window.confirmBeforeNav(document.getElementById("nav-video-link"), abandonMessage);
   }
 
   populateFrameEffectSelect();

@@ -16,7 +16,7 @@ from imagemessrs.video.frame_io import extract_frames
 
 from ..effect_serialization import serialize_effects
 from ..jobs import JOB_TRACKER
-from ..video_store import OUTPUTS_DIR, VIDEO_STORE
+from ..video_store import OUTPUTS_DIR, UPLOADS_DIR, VIDEO_STORE
 
 # Effects eligible to run as a per-frame video technique: single-image only
 # (no second image to sync per-frame) and shape-preserving (seam carving
@@ -236,6 +236,24 @@ def edit(session_id: str):
         has_motion_clip=session.motion_path is not None,
         meta=meta,
     )
+
+
+@video_bp.route("/<session_id>/heading_media", methods=["GET"])
+def heading_media(session_id: str):
+    """Silent, mp4-remuxed copy of the video for the masked-heading background.
+
+    Safari's muted-autoplay exemption is unreliable for a video that carries
+    an audio track even when `muted` is set client-side - stripping the
+    audio track (and remuxing to a plain .mp4 container) server-side removes
+    the ambiguity entirely.
+    """
+    session = VIDEO_STORE.get(session_id)
+    if session is None:
+        abort(404)
+    heading_path = UPLOADS_DIR / f"{session_id}_heading.mp4"
+    if not heading_path.exists():
+        ffmpeg.run(["-i", str(session.original_path), "-an", "-c:v", "copy", "-movflags", "+faststart", "-f", "mp4", str(heading_path)])
+    return send_file(heading_path, conditional=True)
 
 
 @video_bp.route("/<session_id>/thumbnail", methods=["GET"])

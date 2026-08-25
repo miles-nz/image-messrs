@@ -1,5 +1,11 @@
 {% extends "base.html" %} {% block title %}image messrs - video upload{%
-endblock %} {% block content %}
+endblock %}
+{% block header_content %}
+<a id="home-link" href="{{ url_for('root') }}" aria-label="image messrs">
+    <span class="warp-text-target" data-warp-text="image messrs"></span>
+</a>
+{% endblock %}
+{% block content %}
 <h1>Datamosh a video</h1>
 <p>
     Upload a video. The I-Frame Smear technique needs a second "motion" clip too

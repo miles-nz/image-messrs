@@ -1,4 +1,9 @@
 {% extends "base.html" %} {% block title %}image messrs - upload{% endblock %}
+{% block header_content %}
+<a id="home-link" href="{{ url_for('root') }}" aria-label="image messrs">
+    <span class="warp-text-target" data-warp-text="image messrs"></span>
+</a>
+{% endblock %}
 {% block content %}
 <h1>Glitch an image</h1>
 <p>

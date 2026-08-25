@@ -1,4 +1,13 @@
 {% extends "base.html" %} {% block title %}image messrs - editor{% endblock %}
+{% block header_content %}
+<a
+    id="home-link"
+    href="{{ url_for('root') }}"
+    class="masked-heading"
+    data-media-src="{{ url_for('images.original', session_id=session_id) }}"
+    data-media-type="image"
+>image messrs</a>
+{% endblock %}
 {% block content %}
 <div
     class="editor"
@@ -218,7 +227,9 @@
     {{ effects_json | safe }}
 </script>
 {% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/masked-heading.js') }}"></script>
 <script src="{{ url_for('static', filename='js/confirm-modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mask-editor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/elastic-compare.js') }}"></script>
 <script src="{{ url_for('static', filename='js/controls.js') }}"></script>
 {% endblock %}

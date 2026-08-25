@@ -66,6 +66,9 @@
   let compareEnabled = false;
   let compareDragging = false;
   let comparePos = 50;
+  const elasticCompare = compareDividerEl
+    ? window.ElasticCompare.attach(compareDividerEl, compareDividerEl.querySelector(".compare-divider-handle"))
+    : null;
   let zoomObjectUrl = null;
   let zoomScale = 1;
   let zoomFitScale = 1;
@@ -90,6 +93,7 @@
 
   function resizeCompareOverlay() {
     if (!compareOverlayEl) return;
+    if (elasticCompare) elasticCompare.release();
     const rect = previewImg.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     compareOverlayEl.style.left = previewImg.offsetLeft + "px";
@@ -104,8 +108,13 @@
   function setComparePosFromClientX(clientX) {
     const rect = compareOverlayEl.getBoundingClientRect();
     if (!rect.width) return;
-    comparePos = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+    const rawPercent = ((clientX - rect.left) / rect.width) * 100;
+    comparePos = Math.min(100, Math.max(0, rawPercent));
     applyComparePos();
+    if (elasticCompare) {
+      const overflowPercent = rawPercent < 0 ? rawPercent : rawPercent > 100 ? rawPercent - 100 : 0;
+      elasticCompare.update((overflowPercent / 100) * rect.width);
+    }
   }
 
   function setCompareEnabled(value) {
@@ -113,22 +122,33 @@
     compareOverlayEl.classList.toggle("hidden", !value);
     compareToggleBtn.classList.toggle("active", value);
     if (value) resizeCompareOverlay();
+    else if (elasticCompare) elasticCompare.release();
   }
 
-  function refreshCompareBeforeImage() {
-    compareBeforeImg.src = `/images/${sessionId}/original?t=${Date.now()}`;
+  function refreshImageAReferences() {
+    const url = `/images/${sessionId}/original?t=${Date.now()}`;
+    compareBeforeImg.src = url;
+    if (window.MaskedHeading) window.MaskedHeading.refresh(url);
   }
 
   if (compareToggleBtn) {
     compareToggleBtn.addEventListener("click", () => setCompareEnabled(!compareEnabled));
   }
 
-  if (compareDividerEl) {
-    compareDividerEl.addEventListener("mousedown", (e) => {
+  if (compareOverlayEl) {
+    compareOverlayEl.addEventListener("mousedown", (e) => {
       compareDragging = true;
+      setComparePosFromClientX(e.clientX);
       e.preventDefault();
     });
-    compareDividerEl.addEventListener("touchstart", () => { compareDragging = true; }, { passive: true });
+    compareOverlayEl.addEventListener(
+      "touchstart",
+      (e) => {
+        compareDragging = true;
+        setComparePosFromClientX(e.touches[0].clientX);
+      },
+      { passive: true }
+    );
     window.addEventListener("mousemove", (e) => {
       if (!compareDragging) return;
       setComparePosFromClientX(e.clientX);
@@ -141,8 +161,14 @@
       },
       { passive: true }
     );
-    window.addEventListener("mouseup", () => { compareDragging = false; });
-    window.addEventListener("touchend", () => { compareDragging = false; });
+    window.addEventListener("mouseup", () => {
+      if (compareDragging && elasticCompare) elasticCompare.release();
+      compareDragging = false;
+    });
+    window.addEventListener("touchend", () => {
+      if (compareDragging && elasticCompare) elasticCompare.release();
+      compareDragging = false;
+    });
   }
 
   window.addEventListener("resize", () => {
@@ -274,7 +300,7 @@
     if (e.key === "Escape" && zoomLightboxEl && !zoomLightboxEl.classList.contains("hidden")) closeZoom();
   });
 
-  const CATEGORY_ORDER = ["seam_carve", "glitch", "blend", "color", "distort", "video"];
+  const CATEGORY_ORDER = ["glitch", "blend", "color", "distort", "video", "seam_carve"];
   const CATEGORY_LABELS = {
     seam_carve: "Seam Carve",
     glitch: "Glitch",
@@ -477,7 +503,7 @@
         const t = Date.now();
         thumbAImg.src = `/images/${sessionId}/thumbnail/a?t=${t}`;
         thumbBImg.src = `/images/${sessionId}/thumbnail/b?t=${t}`;
-        refreshCompareBeforeImage();
+        refreshImageAReferences();
         runPreview();
       })
       .catch((err) => {
@@ -504,7 +530,7 @@
       })
       .then(() => {
         img.src = `/images/${sessionId}/thumbnail/${slot}?t=${Date.now()}`;
-        if (slot === "a") refreshCompareBeforeImage();
+        if (slot === "a") refreshImageAReferences();
         if (slot === "b") {
           hasImageB = true;
           updateVisibility(effectsByName[effectSelect.value]);
@@ -697,6 +723,8 @@
     const abandonMessage = "You'll lose this editing session and any effect settings you've configured. Continue?";
     window.confirmBeforeNav(document.getElementById("home-link"), abandonMessage);
     window.confirmBeforeNav(document.getElementById("new-upload-link"), abandonMessage);
+    window.confirmBeforeNav(document.getElementById("nav-image-link"), abandonMessage);
+    window.confirmBeforeNav(document.getElementById("nav-video-link"), abandonMessage);
   }
 
   // If both photos were already uploaded up front, default to browsing

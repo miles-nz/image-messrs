@@ -1,5 +1,15 @@
 {% extends "base.html" %} {% block title %}image messrs - video editor{%
-endblock %} {% block content %}
+endblock %}
+{% block header_content %}
+<a
+    id="home-link"
+    href="{{ url_for('root') }}"
+    class="masked-heading"
+    data-media-src="{{ url_for('video.heading_media', session_id=session_id) }}"
+    data-media-type="video"
+>image messrs</a>
+{% endblock %}
+{% block content %}
 <div
     class="video-editor"
     data-session-id="{{ session_id }}"
@@ -98,6 +108,7 @@ endblock %} {% block content %}
     {{ frame_effects_json | safe }}
 </script>
 {% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/masked-heading.js') }}"></script>
 <script src="{{ url_for('static', filename='js/confirm-modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/video-controls.js') }}"></script>
 {% endblock %}
