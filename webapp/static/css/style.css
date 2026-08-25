@@ -374,6 +374,33 @@ button.secondary:hover:not(:disabled) {
     flex: 1 1 0;
 }
 
+.download-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.download-row #download-btn {
+    flex: 1 1 auto;
+}
+
+.apply-effect-btn {
+    flex: 0 0 auto;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.apply-status {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: -0.25rem 0 0;
+}
+
+.apply-status.error {
+    color: var(--accent-red);
+}
+
 .editor {
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);

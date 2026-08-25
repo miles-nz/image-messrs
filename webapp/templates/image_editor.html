@@ -169,7 +169,18 @@
 
         <div id="param-controls"></div>
 
-        <button type="button" id="download-btn">Download full-res</button>
+        <div class="download-row">
+            <button type="button" id="download-btn">Download full-res</button>
+            <button
+                type="button"
+                id="apply-effect-btn"
+                class="secondary apply-effect-btn"
+                title="Bake this effect into the photo, then apply another effect on top of it"
+            >
+                Apply &amp; keep editing
+            </button>
+        </div>
+        <p id="apply-status" class="apply-status hidden"></p>
 
         <details id="animate-panel" class="animate-panel hidden" open>
             <summary>

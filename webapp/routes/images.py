@@ -210,6 +210,16 @@ def render(session_id: str):
     )
 
 
+@images_bp.route("/<session_id>/apply", methods=["POST"])
+def apply_effect(session_id: str):
+    """Bakes the current effect (at full resolution) into photo A, so a
+    further effect can be cascaded on top of the result."""
+    result = _run_effect(session_id, full_res=True)
+    IMAGE_STORE.set_image_a(session_id, result)
+    height, width = result.shape[:2]
+    return jsonify({"ok": True, "width": int(width), "height": int(height)})
+
+
 @images_bp.route("/<session_id>/animate", methods=["POST"])
 def animate(session_id: str):
     session = IMAGE_STORE.get(session_id)

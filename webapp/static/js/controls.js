@@ -20,6 +20,8 @@
   const secondImageFormEl = document.getElementById("second-image-form");
   const secondImageInputEl = document.getElementById("second-image-input");
   const downloadBtn = document.getElementById("download-btn");
+  const applyEffectBtn = document.getElementById("apply-effect-btn");
+  const applyStatusEl = document.getElementById("apply-status");
   const compareToggleBtn = document.getElementById("compare-toggle-btn");
   const compareOverlayEl = document.getElementById("compare-overlay");
   const compareBeforeWrapEl = document.getElementById("compare-before-wrap");
@@ -443,6 +445,7 @@
     maskControlsEl.classList.toggle("hidden", !effect.accepts_mask);
     if (window.MaskEditor) window.MaskEditor.setEnabled(effect.accepts_mask);
     downloadBtn.disabled = needsSecondImage;
+    if (applyEffectBtn) applyEffectBtn.disabled = needsSecondImage;
     if (zoomBtn) zoomBtn.disabled = needsSecondImage;
     thumbBoxB.classList.toggle("hidden", !(effect.multi_image && hasImageB));
 
@@ -612,6 +615,55 @@
       .catch((err) => console.error(err));
   }
 
+  function applyEffect() {
+    const effect = effectsByName[effectSelect.value];
+    if (effect.multi_image && !hasImageB) return;
+
+    if (window.showConfirmModal) {
+      window.showConfirmModal({
+        title: "Apply effect?",
+        message:
+          "This bakes the current effect into the photo so you can stack another one on top. You won't be able to re-tune this effect's settings afterward.",
+        confirmLabel: "Apply",
+        onConfirm: doApplyEffect,
+      });
+    } else {
+      doApplyEffect();
+    }
+  }
+
+  function doApplyEffect() {
+    const effect = effectsByName[effectSelect.value];
+    applyEffectBtn.disabled = true;
+    downloadBtn.disabled = true;
+    applyStatusEl.classList.remove("error", "hidden");
+    applyStatusEl.textContent = "Applying effect…";
+
+    const formData = buildFormData(effect);
+    fetch(`/images/${sessionId}/apply`, { method: "POST", body: formData })
+      .then((res) => {
+        if (!res.ok) return res.text().then((text) => Promise.reject(new Error(text)));
+        return res.json();
+      })
+      .then(() => {
+        if (window.MaskEditor) window.MaskEditor.clear();
+        setCompareEnabled(false);
+        thumbAImg.src = `/images/${sessionId}/thumbnail/a?t=${Date.now()}`;
+        refreshImageAReferences();
+        buildControlsForEffect(effect); // reset sliders to defaults for the next pass
+        applyStatusEl.textContent = "Applied - pick another effect (or the same one again) to keep going.";
+        runPreview();
+      })
+      .catch((err) => {
+        console.error(err);
+        applyStatusEl.textContent = "Failed to apply effect: " + err.message;
+        applyStatusEl.classList.add("error");
+      })
+      .finally(() => {
+        updateVisibility(effectsByName[effectSelect.value]);
+      });
+  }
+
   function startAnimateJob() {
     const effect = effectsByName[effectSelect.value];
     const formData = buildFormData(effect);
@@ -694,6 +746,7 @@
   });
   effectSelect.addEventListener("change", selectEffectChanged);
   downloadBtn.addEventListener("click", downloadFullRes);
+  if (applyEffectBtn) applyEffectBtn.addEventListener("click", applyEffect);
   swapPhotosBtn.addEventListener("click", swapPhotos);
   animateParamSelect.addEventListener("change", () => {
     const effect = effectsByName[effectSelect.value];
