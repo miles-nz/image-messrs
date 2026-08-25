@@ -1,0 +1,15 @@
+{% extends "base.html" %} {% block title %}image messrs - session expired{% endblock %}
+{% block header_content %}
+<a id="home-link" href="{{ url_for('root') }}" aria-label="image messrs">
+    <span class="warp-text-target" data-warp-text="image messrs"></span>
+</a>
+{% endblock %}
+{% block content %}
+<h1>This session has expired</h1>
+<p>
+    Editing sessions live only in memory, so restarting the server (or a
+    deploy) clears them out. Upload your {{ media_label }} again to pick up
+    where you left off - your original file wasn't saved anywhere.
+</p>
+<a href="{{ upload_url }}" class="button">Upload a new {{ media_label }}</a>
+{% endblock %}

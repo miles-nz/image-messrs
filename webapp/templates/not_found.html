@@ -1,0 +1,11 @@
+{% extends "base.html" %} {% block title %}image messrs - not found{% endblock %}
+{% block header_content %}
+<a id="home-link" href="{{ url_for('root') }}" aria-label="image messrs">
+    <span class="warp-text-target" data-warp-text="image messrs"></span>
+</a>
+{% endblock %}
+{% block content %}
+<h1>Page not found</h1>
+<p>There's nothing at this address.</p>
+<a href="{{ url_for('root') }}" class="button">Back to image messrs</a>
+{% endblock %}

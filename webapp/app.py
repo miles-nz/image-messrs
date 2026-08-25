@@ -27,4 +27,8 @@ def create_app() -> Flask:
     def root():
         return render_template("index.html")
 
+    @app.errorhandler(404)
+    def not_found(_error):
+        return render_template("not_found.html"), 404
+
     return app

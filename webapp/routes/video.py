@@ -208,7 +208,11 @@ def edit(session_id: str):
 
     session = VIDEO_STORE.get(session_id)
     if session is None:
-        abort(404)
+        return render_template(
+            "session_expired.html",
+            media_label="video",
+            upload_url=url_for("video.index"),
+        ), 404
 
     meta = {}
     try:
