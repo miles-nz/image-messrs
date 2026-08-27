@@ -35,13 +35,13 @@ endblock %}
 
         <dl class="video-meta">
             <dt>Duration</dt>
-            <dd>
+            <dd id="meta-duration">
                 {{ meta.duration or '-' }}{% if meta.duration %}s{% endif %}
             </dd>
             <dt>Resolution</dt>
-            <dd>{{ meta.width or '?' }}x{{ meta.height or '?' }}</dd>
+            <dd id="meta-resolution">{{ meta.width or '?' }}x{{ meta.height or '?' }}</dd>
             <dt>Codec</dt>
-            <dd>{{ meta.codec or '-' }}</dd>
+            <dd id="meta-codec">{{ meta.codec or '-' }}</dd>
         </dl>
 
         <div id="motion-clip-prompt" class="hidden">
@@ -61,9 +61,20 @@ endblock %}
             </form>
         </div>
 
-        <a id="download-link" class="hidden" download="image-messrs-output.mp4"
-            >Download result</a
-        >
+        <div class="download-row">
+            <a id="download-link" class="hidden" download="image-messrs-output.mp4"
+                >Download result</a
+            >
+            <button
+                type="button"
+                id="apply-video-btn"
+                class="secondary apply-effect-btn hidden"
+                title="Bake this rendered clip in as the new base video, then apply another technique on top of it"
+            >
+                Apply &amp; keep editing
+            </button>
+        </div>
+        <p id="apply-status" class="apply-status hidden"></p>
     </div>
 
     <div class="controls-pane">
@@ -79,6 +90,11 @@ endblock %}
         <label id="frame-effect-select-label" class="effect-select-label hidden">
             Image Effect
             <select id="frame-effect-select"></select>
+        </label>
+
+        <label id="sub-technique-select-label" class="effect-select-label hidden">
+            Direction
+            <select id="sub-technique-select"></select>
         </label>
 
         <details id="effect-about" class="effect-about">

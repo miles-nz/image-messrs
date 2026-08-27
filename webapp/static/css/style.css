@@ -376,7 +376,8 @@ button.secondary:hover:not(:disabled) {
 
 .download-row {
     display: flex;
-    align-items: stretch;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
 }
 

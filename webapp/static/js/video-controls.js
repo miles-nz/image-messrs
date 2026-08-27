@@ -6,11 +6,13 @@
   const editorEl = document.querySelector(".video-editor");
   const sessionId = editorEl.dataset.sessionId;
   const hasMotionClip = editorEl.dataset.hasMotionClip === "true";
-  const thumbnailUrl = document.getElementById("thumbnail").src;
+  let thumbnailUrl = document.getElementById("thumbnail").src;
 
   const techniqueSelect = document.getElementById("technique-select");
   const frameEffectSelectLabel = document.getElementById("frame-effect-select-label");
   const frameEffectSelect = document.getElementById("frame-effect-select");
+  const subTechniqueSelectLabel = document.getElementById("sub-technique-select-label");
+  const subTechniqueSelect = document.getElementById("sub-technique-select");
   const paramControlsEl = document.getElementById("param-controls");
   const effectAboutEl = document.getElementById("effect-about");
   const motionPromptEl = document.getElementById("motion-clip-prompt");
@@ -20,6 +22,11 @@
   const thumbnail = document.getElementById("thumbnail");
   const resultVideo = document.getElementById("result-video");
   const downloadLink = document.getElementById("download-link");
+  const applyVideoBtn = document.getElementById("apply-video-btn");
+  const applyStatusEl = document.getElementById("apply-status");
+  const metaDurationEl = document.getElementById("meta-duration");
+  const metaResolutionEl = document.getElementById("meta-resolution");
+  const metaCodecEl = document.getElementById("meta-codec");
   const framePreviewLoadingEl = document.getElementById("frame-preview-loading");
   const framePreviewStatusEl = document.getElementById("frame-preview-status");
 
@@ -28,6 +35,7 @@
   let frameDebounceTimer = null;
   let frameRequestSeq = 0;
   let currentFramePreviewController = null;
+  let lastFullRenderJobId = null;
 
   function currentSpec() {
     return techniques[techniqueSelect.value];
@@ -49,6 +57,26 @@
       opt.textContent = `${effect.label} (${effect.category})`;
       opt.title = effect.description || "";
       frameEffectSelect.appendChild(opt);
+    });
+  }
+
+  function isSubTechniqueBridge(spec) {
+    return !!spec.sub_techniques;
+  }
+
+  function currentSubTechnique() {
+    const spec = currentSpec();
+    return isSubTechniqueBridge(spec) ? spec.sub_techniques[subTechniqueSelect.value] : null;
+  }
+
+  function populateSubTechniqueSelect(spec) {
+    subTechniqueSelect.innerHTML = "";
+    if (!isSubTechniqueBridge(spec)) return;
+    Object.entries(spec.sub_techniques).forEach(([name, subSpec]) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = subSpec.label;
+      subTechniqueSelect.appendChild(opt);
     });
   }
 
@@ -198,6 +226,11 @@
       buildParamControls(effect ? effect.params : [], scheduleFramePreview);
       updateAbout(effect ? effect.about : spec.about);
       runFramePreview();
+    } else if (isSubTechniqueBridge(spec)) {
+      const subTechnique = currentSubTechnique();
+      buildParamControls(subTechnique ? subTechnique.params : [], () => {});
+      updateAbout((subTechnique && subTechnique.about) || spec.about);
+      resetToStaticThumbnail();
     } else {
       buildParamControls(spec.params, () => {});
       updateAbout(spec.about);
@@ -207,6 +240,7 @@
 
   function updateVisibility(spec) {
     frameEffectSelectLabel.classList.toggle("hidden", !isFrameBridge(spec));
+    subTechniqueSelectLabel.classList.toggle("hidden", !isSubTechniqueBridge(spec));
     const needsMotion = spec.needs_motion_clip && !hasMotionClip;
     motionPromptEl.classList.toggle("hidden", !needsMotion);
     previewBtn.disabled = needsMotion;
@@ -220,6 +254,9 @@
     if (isFrameBridge(spec)) {
       formData.append("frame_effect", frameEffectSelect.value);
     }
+    if (isSubTechniqueBridge(spec)) {
+      formData.append("sub_technique", subTechniqueSelect.value);
+    }
     formData.append("trim_preview", trim ? "true" : "false");
     currentParamInputs().forEach((input) => {
       const value = input.type === "checkbox" ? (input.checked ? "true" : "false") : input.value;
@@ -232,6 +269,9 @@
     jobStatusEl.classList.remove("error");
     resultVideo.classList.add("hidden");
     downloadLink.classList.add("hidden");
+    applyVideoBtn.classList.add("hidden");
+    applyStatusEl.classList.add("hidden");
+    lastFullRenderJobId = null;
     thumbnail.classList.remove("hidden");
 
     fetch(`/video/${sessionId}/process`, { method: "POST", body: formData })
@@ -239,7 +279,7 @@
         if (!res.ok) return res.text().then((text) => Promise.reject(new Error(text)));
         return res.json();
       })
-      .then(({ job_id }) => pollJob(job_id))
+      .then(({ job_id }) => pollJob(job_id, trim))
       .catch((err) => {
         jobStatusEl.textContent = "Failed to start: " + err.message;
         jobStatusEl.classList.add("error");
@@ -249,7 +289,7 @@
       });
   }
 
-  function pollJob(jobId) {
+  function pollJob(jobId, trim) {
     clearInterval(pollTimer);
     pollTimer = setInterval(() => {
       fetch(`/video/${sessionId}/jobs/${jobId}/status`)
@@ -269,6 +309,11 @@
             thumbnail.classList.add("hidden");
             downloadLink.href = url;
             downloadLink.classList.remove("hidden");
+            if (!trim) {
+              lastFullRenderJobId = jobId;
+              applyVideoBtn.classList.remove("hidden");
+              applyVideoBtn.disabled = false;
+            }
           } else if (data.status === "error") {
             clearInterval(pollTimer);
             jobStatusEl.textContent = "Error: " + (data.error || "unknown error");
@@ -287,14 +332,75 @@
     }, 1000);
   }
 
+  function updateMeta(meta) {
+    meta = meta || {};
+    metaDurationEl.textContent = meta.duration ? `${meta.duration}s` : "-";
+    metaResolutionEl.textContent = `${meta.width || "?"}x${meta.height || "?"}`;
+    metaCodecEl.textContent = meta.codec || "-";
+  }
+
+  function applyVideo() {
+    if (!lastFullRenderJobId) return;
+    if (window.showConfirmModal) {
+      window.showConfirmModal({
+        title: "Apply this render?",
+        message:
+          "This makes the rendered clip the new base video, so you can stack another technique on top of it. You won't be able to get back to the previous version afterward.",
+        confirmLabel: "Apply",
+        onConfirm: doApplyVideo,
+      });
+    } else {
+      doApplyVideo();
+    }
+  }
+
+  function doApplyVideo() {
+    const jobId = lastFullRenderJobId;
+    if (!jobId) return;
+
+    applyVideoBtn.disabled = true;
+    applyStatusEl.classList.remove("error", "hidden");
+    applyStatusEl.textContent = "Applying…";
+
+    fetch(`/video/${sessionId}/apply/${jobId}`, { method: "POST" })
+      .then((res) => {
+        if (!res.ok) return res.text().then((text) => Promise.reject(new Error(text)));
+        return res.json();
+      })
+      .then(({ meta }) => {
+        lastFullRenderJobId = null;
+        applyVideoBtn.classList.add("hidden");
+        resultVideo.classList.add("hidden");
+        resultVideo.removeAttribute("src");
+        downloadLink.classList.add("hidden");
+        updateMeta(meta);
+        thumbnailUrl = `/video/${sessionId}/thumbnail?t=${Date.now()}`;
+        thumbnail.classList.remove("hidden");
+        resetToStaticThumbnail();
+        if (window.MaskedHeading) {
+          window.MaskedHeading.refresh(`/video/${sessionId}/heading_media?t=${Date.now()}`);
+        }
+        applyStatusEl.textContent = "Applied - pick another technique to keep going.";
+      })
+      .catch((err) => {
+        console.error(err);
+        applyStatusEl.textContent = "Failed to apply: " + err.message;
+        applyStatusEl.classList.add("error");
+        applyVideoBtn.disabled = false;
+      });
+  }
+
   techniqueSelect.addEventListener("change", () => {
     const spec = currentSpec();
+    populateSubTechniqueSelect(spec);
     updateVisibility(spec);
     refreshControlsAndAbout();
   });
   frameEffectSelect.addEventListener("change", refreshControlsAndAbout);
+  subTechniqueSelect.addEventListener("change", refreshControlsAndAbout);
   previewBtn.addEventListener("click", () => startJob(true));
   renderBtn.addEventListener("click", () => startJob(false));
+  applyVideoBtn.addEventListener("click", applyVideo);
 
   if (window.confirmBeforeNav) {
     const abandonMessage = "You'll lose this editing session and any results you haven't downloaded. Continue?";
@@ -305,6 +411,7 @@
   }
 
   populateFrameEffectSelect();
+  populateSubTechniqueSelect(currentSpec());
   updateVisibility(currentSpec());
   refreshControlsAndAbout();
 })();

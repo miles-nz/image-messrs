@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import tempfile
 import uuid
 from io import BytesIO
@@ -10,7 +11,7 @@ from flask import Blueprint, abort, jsonify, redirect, render_template, request,
 from imagemessrs.core.io_utils import save_image
 from imagemessrs.core.registry import list_effects
 from imagemessrs.effects.base import coerce_params
-from imagemessrs.video import datamosh, frame_effects
+from imagemessrs.video import datamosh, frame_effects, slowmo
 from imagemessrs.video import ffmpeg_wrapper as ffmpeg
 from imagemessrs.video.frame_io import extract_frames
 
@@ -77,6 +78,77 @@ TECHNIQUES = {
                 "description": "How much weight older frames keep in the blend, per step back. Near 0 = older frames vanish almost immediately (subtle, tight trail). Near 0.95 = older frames stay nearly as strong as the current one (heavy, dragging smear). Only matters if Trail Length is above 1.",
             },
         ],
+    },
+    "change_speed": {
+        "label": "Change Speed",
+        "description": "Slows footage down or speeds it up by synthesizing/combining frames from the motion between them, instead of just retiming or dropping frames - smoother than a naive fps change, no audio.",
+        "about": {
+            "what": "Changes the clip's playback speed by generating or combining frames based on the motion between them, rather than just stretching or dropping the existing ones.",
+            "how_to_use": "Pick Slow Down or Speed Up below, then set that direction's Speed and Method.",
+            "used_for": "Turning ordinary footage into slow motion or fast motion without the stutter/strobing of a naive frame-rate change.",
+            "examples": "Motion-compensated frame interpolation (slowing down) and motion-compensated frame blending (speeding up) are the same family of technique behind TV/monitor \"motion smoothing\" and speed-ramp tools in video editing software.",
+        },
+        "needs_motion_clip": False,
+        "sub_techniques": {
+            "slow_down": {
+                "label": "Slow Down",
+                "about": {
+                    "what": "Slows playback down by generating new frames between the real ones, based on the motion between them, rather than just duplicating or stretching the existing frames over a longer duration.",
+                    "how_to_use": "Set Speed to how much slower the clip should play (0.5 = half speed). Method controls how the in-between frames are made: Optical Flow estimates the actual motion and warps toward it (smoother, slower to render); Blend just cross-dissolves adjacent frames (fast, but ghosts on anything moving); Duplicate just holds the previous frame (fastest, but stutters - the naive 'just lower the fps' baseline the other two methods improve on). Audio is dropped, since the clip's length changes.",
+                    "used_for": "Turning ordinary footage into slow motion without the stutter you'd get from just re-timing the original frame count.",
+                    "examples": "Motion-compensated frame interpolation is the same family of technique behind TV/monitor \"motion smoothing\" and slow-mo modes in video editing software - estimating where pixels moved between frames and synthesizing the frames in between, rather than just repeating or blending existing ones.",
+                },
+                "params": [
+                    {
+                        "name": "speed_factor",
+                        "label": "Speed",
+                        "kind": "float",
+                        "default": 0.5,
+                        "min": 0.1,
+                        "max": 0.9,
+                        "step": 0.05,
+                        "description": "Playback speed multiplier. 0.5 = half speed (2x slower). Lower values need more synthesized frames between each original pair, so they cost more processing time.",
+                    },
+                    {
+                        "name": "method",
+                        "label": "Method",
+                        "kind": "choice",
+                        "default": "optical_flow",
+                        "choices": ["optical_flow", "blend", "duplicate"],
+                        "description": "Optical Flow estimates real motion between frames and warps toward it - smoother, no ghosting, but slower and can warp oddly around occlusion or scene cuts. Blend just cross-dissolves adjacent frames - fast, but visibly ghosts anything in motion. Duplicate just holds the previous frame - fastest, but stutters (the naive 'just lower the fps' baseline).",
+                    },
+                ],
+            },
+            "speed_up": {
+                "label": "Speed Up",
+                "about": {
+                    "what": "Speeds playback up by combining each stretch of skipped source frames into the one output frame that represents it, rather than simply dropping them and keeping only every Nth frame.",
+                    "how_to_use": "Set Speed to how much faster the clip should play (2 = twice as fast). Method controls how each group of skipped frames is combined: Optical Flow warps them onto the kept frame's motion position before combining (smoothest, closest to real motion blur, slower to render); Blend just averages the group (fast, but flattens fast motion into a soft ghost); Drop just keeps the last frame of each group and throws the rest away (fastest, but strobes/judders - the naive 'just lower the fps' baseline the other two methods improve on). Audio is dropped, since the clip's length changes.",
+                    "used_for": "Turning ordinary footage into fast motion / time-lapse-style playback without the strobing you'd get from simply dropping frames.",
+                    "examples": "This is the same idea in reverse as Slow Down - instead of estimating motion to invent new in-between frames, it estimates motion to combine several real frames into one, closer to how a camera's own motion blur looks at a slower shutter speed than to a jarring skipped-frame time-lapse.",
+                },
+                "params": [
+                    {
+                        "name": "speed_factor",
+                        "label": "Speed",
+                        "kind": "float",
+                        "default": 2.0,
+                        "min": 1.5,
+                        "max": 8.0,
+                        "step": 0.5,
+                        "description": "Playback speed multiplier. 2 = twice as fast. Rounds to a whole number of source frames combined per output frame, so actual output speed is only approximate.",
+                    },
+                    {
+                        "name": "method",
+                        "label": "Method",
+                        "kind": "choice",
+                        "default": "optical_flow",
+                        "choices": ["optical_flow", "blend", "drop"],
+                        "description": "Optical Flow warps each skipped frame onto the kept frame's motion position before combining - smoothest, closest to real motion blur, but slower and can warp oddly around occlusion or scene cuts. Blend just averages the group - fast, but flattens fast motion into a soft ghost. Drop just keeps the last frame of the group - fastest, but strobes/judders (the naive 'just lower the fps' baseline).",
+                    },
+                ],
+            },
+        },
     },
     "feedback_loop": {
         "label": "Feedback Loop (generation loss)",
@@ -163,6 +235,20 @@ def _suffix_for(file_storage) -> str:
     return Path(file_storage.filename).suffix or ".mp4"
 
 
+def _probe_meta(path: Path) -> dict:
+    try:
+        info = ffmpeg.probe(path)
+    except ffmpeg.FFmpegError:
+        return {}
+    video_stream = next((s for s in info.get("streams", []) if s.get("codec_type") == "video"), {})
+    return {
+        "duration": info.get("format", {}).get("duration"),
+        "width": video_stream.get("width"),
+        "height": video_stream.get("height"),
+        "codec": video_stream.get("codec_name"),
+    }
+
+
 def _maybe_trim(path: Path, trim: bool, tmp_dir: Path, name: str) -> Path:
     if not trim:
         return path
@@ -214,18 +300,7 @@ def edit(session_id: str):
             upload_url=url_for("video.index"),
         ), 404
 
-    meta = {}
-    try:
-        info = ffmpeg.probe(session.original_path)
-        video_stream = next((s for s in info.get("streams", []) if s.get("codec_type") == "video"), {})
-        meta = {
-            "duration": info.get("format", {}).get("duration"),
-            "width": video_stream.get("width"),
-            "height": video_stream.get("height"),
-            "codec": video_stream.get("codec_name"),
-        }
-    except ffmpeg.FFmpegError:
-        pass
+    meta = _probe_meta(session.original_path)
 
     return render_template(
         "video_editor.html",
@@ -313,6 +388,7 @@ def process(session_id: str):
     params: dict = {}
     frame_effect_name = None
     frame_effect_params: dict = {}
+    sub_technique_name = None
     if spec.get("frame_effect_bridge"):
         frame_effect_name = request.form.get("frame_effect")
         eligible = {e.name: e for e in _frame_effects()}
@@ -322,6 +398,12 @@ def process(session_id: str):
             k: v for k, v in request.form.items() if k not in ("technique", "frame_effect", "trim_preview")
         }
         frame_effect_params = coerce_params(eligible[frame_effect_name].params, raw_params)
+    elif spec.get("sub_techniques"):
+        sub_technique_name = request.form.get("sub_technique")
+        sub_spec = spec["sub_techniques"].get(sub_technique_name)
+        if sub_spec is None:
+            abort(400, description=f"unknown sub_technique {sub_technique_name!r} for technique {technique!r}")
+        params = {p["name"]: _coerce(request.form.get(p["name"], p["default"]), p["kind"]) for p in sub_spec["params"]}
     else:
         params = {p["name"]: _coerce(request.form.get(p["name"], p["default"]), p["kind"]) for p in spec["params"]}
 
@@ -346,6 +428,11 @@ def process(session_id: str):
                 )
             elif technique == "frame_blend":
                 datamosh.frame_blend(str(base_path), str(output_path), **params)
+            elif technique == "change_speed":
+                if sub_technique_name == "speed_up":
+                    slowmo.speed_up(str(base_path), str(output_path), on_progress=on_progress, **params)
+                else:
+                    slowmo.slow_motion(str(base_path), str(output_path), on_progress=on_progress, **params)
             elif technique == "feedback_loop":
                 datamosh.feedback_loop(str(base_path), str(output_path), **params)
             elif technique == "iframe_smear":
@@ -371,3 +458,26 @@ def job_result(session_id: str, job_id: str):
     if job is None or job.status != "done" or job.result_path is None:
         abort(404)
     return send_file(str(job.result_path), mimetype="video/mp4")
+
+
+@video_bp.route("/<session_id>/apply/<job_id>", methods=["POST"])
+def apply_job_result(session_id: str, job_id: str):
+    """Bakes a finished full-render job's output in as the session's new
+    base clip, so a further technique can be cascaded on top of it."""
+    session = VIDEO_STORE.get(session_id)
+    if session is None:
+        abort(404)
+    job = JOB_TRACKER.get(job_id)
+    if job is None or job.status != "done" or job.result_path is None:
+        abort(404)
+
+    new_path = UPLOADS_DIR / f"{session_id}_{uuid.uuid4().hex}.mp4"
+    shutil.copy2(job.result_path, new_path)
+    VIDEO_STORE.set_original(session_id, new_path)
+
+    # The masked-heading video is cached by session id only - drop the stale
+    # copy so it gets regenerated from the new base clip on next fetch.
+    heading_path = UPLOADS_DIR / f"{session_id}_heading.mp4"
+    heading_path.unlink(missing_ok=True)
+
+    return jsonify({"ok": True, "meta": _probe_meta(new_path)})

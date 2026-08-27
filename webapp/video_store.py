@@ -44,5 +44,11 @@ class VideoStore:
             if session is not None:
                 session.motion_path = path
 
+    def set_original(self, session_id: str, path: Path) -> None:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is not None:
+                session.original_path = path
+
 
 VIDEO_STORE = VideoStore()
