@@ -8,11 +8,20 @@ import numpy as np
 
 
 @dataclass
+class CropRect:
+    x: float  # 0..1
+    y: float  # 0..1
+    width: float  # 0..1
+    height: float  # 0..1
+
+
+@dataclass
 class ImageSession:
     id: str
     original: np.ndarray
     original_b: np.ndarray | None = None
     suggested_source_camera: str | None = None
+    crop: CropRect | None = None
 
 
 class ImageStore:
@@ -42,12 +51,19 @@ class ImageStore:
             session = self._sessions.get(session_id)
             if session is not None:
                 session.original = image_a
+                session.crop = None
 
     def set_image_b(self, session_id: str, image_b: np.ndarray) -> None:
         with self._lock:
             session = self._sessions.get(session_id)
             if session is not None:
                 session.original_b = image_b
+
+    def set_crop(self, session_id: str, crop: CropRect | None) -> None:
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if session is not None:
+                session.crop = crop
 
     def swap(self, session_id: str) -> bool:
         """Swaps photos A and B in place. Returns False (no-op) if the
@@ -57,6 +73,7 @@ class ImageStore:
             if session is None or session.original_b is None:
                 return False
             session.original, session.original_b = session.original_b, session.original
+            session.crop = None
             return True
 
 

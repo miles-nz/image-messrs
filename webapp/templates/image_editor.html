@@ -79,6 +79,14 @@
                 >
                     Compare
                 </button>
+                <button
+                    type="button"
+                    id="crop-toggle-btn"
+                    class="crop-toggle-btn"
+                    title="Crop the region fed into the effect"
+                >
+                    Crop
+                </button>
                 <div id="compare-overlay" class="compare-overlay hidden">
                     <div id="compare-before-wrap" class="compare-before-wrap">
                         <img
@@ -94,6 +102,18 @@
                     <span class="compare-tag compare-tag-after">After</span>
                 </div>
                 <canvas id="mask-canvas" class="hidden"></canvas>
+                <div id="crop-overlay" class="crop-overlay hidden">
+                    <div id="crop-rect" class="crop-rect">
+                        <div class="crop-handle" data-handle="nw"></div>
+                        <div class="crop-handle" data-handle="n"></div>
+                        <div class="crop-handle" data-handle="ne"></div>
+                        <div class="crop-handle" data-handle="e"></div>
+                        <div class="crop-handle" data-handle="se"></div>
+                        <div class="crop-handle" data-handle="s"></div>
+                        <div class="crop-handle" data-handle="sw"></div>
+                        <div class="crop-handle" data-handle="w"></div>
+                    </div>
+                </div>
                 <div id="preview-loading" class="preview-loading hidden">Rendering preview&hellip;</div>
             </div>
         </div>
@@ -126,6 +146,25 @@
             <p class="hint">
                 Paint the region to protect (seam carve) or blend in (Poisson
                 blend).
+            </p>
+        </div>
+
+        <div id="crop-controls" class="mask-controls hidden">
+            <label class="effect-select-label">
+                Aspect ratio
+                <select id="crop-aspect-select">
+                    <option value="">Free</option>
+                    <option value="1:1">1:1</option>
+                    <option value="4:3">4:3</option>
+                    <option value="16:9">16:9</option>
+                    <option value="3:2">3:2</option>
+                </select>
+            </label>
+            <button type="button" id="crop-reset-btn" class="secondary">Reset crop</button>
+            <p class="hint">
+                Drag a rectangle over the preview. The selected effect runs
+                against the cropped region only, for preview, compare, zoom,
+                and download.
             </p>
         </div>
 
@@ -241,6 +280,7 @@
 <script src="{{ url_for('static', filename='js/masked-heading.js') }}"></script>
 <script src="{{ url_for('static', filename='js/confirm-modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mask-editor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/crop-editor.js') }}"></script>
 <script src="{{ url_for('static', filename='js/elastic-compare.js') }}"></script>
 <script src="{{ url_for('static', filename='js/controls.js') }}"></script>
 {% endblock %}

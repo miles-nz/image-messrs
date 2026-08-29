@@ -24,6 +24,10 @@
   const applyStatusEl = document.getElementById("apply-status");
   const compareToggleBtn = document.getElementById("compare-toggle-btn");
   const compareOverlayEl = document.getElementById("compare-overlay");
+  const cropToggleBtn = document.getElementById("crop-toggle-btn");
+  const cropControlsEl = document.getElementById("crop-controls");
+  const cropAspectSelect = document.getElementById("crop-aspect-select");
+  const cropResetBtn = document.getElementById("crop-reset-btn");
   const compareBeforeWrapEl = document.getElementById("compare-before-wrap");
   const compareBeforeImg = document.getElementById("compare-before-image");
   const compareDividerEl = document.getElementById("compare-divider");
@@ -67,6 +71,7 @@
   let animatePollTimer = null;
   let compareEnabled = false;
   let compareDragging = false;
+  let cropEnabled = false;
   let comparePos = 50;
   const elasticCompare = compareDividerEl
     ? window.ElasticCompare.attach(compareDividerEl, compareDividerEl.querySelector(".compare-divider-handle"))
@@ -128,14 +133,59 @@
   }
 
   function refreshImageAReferences() {
-    const url = `/images/${sessionId}/original?t=${Date.now()}`;
-    compareBeforeImg.src = url;
-    if (window.MaskedHeading) window.MaskedHeading.refresh(url);
+    const t = Date.now();
+    compareBeforeImg.src = `/images/${sessionId}/crop_preview?t=${t}`;
+    if (window.MaskedHeading) window.MaskedHeading.refresh(`/images/${sessionId}/original?t=${t}`);
   }
 
   if (compareToggleBtn) {
     compareToggleBtn.addEventListener("click", () => setCompareEnabled(!compareEnabled));
   }
+
+  function postCrop(rect) {
+    const formData = new FormData();
+    if (rect) {
+      formData.append("x", rect.x);
+      formData.append("y", rect.y);
+      formData.append("width", rect.width);
+      formData.append("height", rect.height);
+    } else {
+      formData.append("clear", "true");
+    }
+    fetch(`/images/${sessionId}/crop`, { method: "POST", body: formData })
+      .then((res) => {
+        if (!res.ok) throw new Error("crop update failed");
+        refreshImageAReferences();
+      })
+      .catch((err) => console.error(err));
+  }
+
+  function setCropEnabled(value) {
+    cropEnabled = value;
+    cropToggleBtn.classList.toggle("active", value);
+    cropControlsEl.classList.toggle("hidden", !value);
+    if (window.CropEditor) window.CropEditor.setEnabled(value);
+    if (value) {
+      previewImg.src = `/images/${sessionId}/original?t=${Date.now()}`;
+    } else {
+      runPreview();
+    }
+  }
+
+  if (cropToggleBtn) {
+    cropToggleBtn.addEventListener("click", () => setCropEnabled(!cropEnabled));
+  }
+  if (cropResetBtn) {
+    cropResetBtn.addEventListener("click", () => {
+      if (window.CropEditor) window.CropEditor.reset();
+    });
+  }
+  if (cropAspectSelect) {
+    cropAspectSelect.addEventListener("change", () => {
+      if (window.CropEditor) window.CropEditor.setAspect(cropAspectSelect.value);
+    });
+  }
+  window.addEventListener("crop-updated", (e) => postCrop(e.detail));
 
   if (compareOverlayEl) {
     compareOverlayEl.addEventListener("mousedown", (e) => {
@@ -506,6 +556,7 @@
         const t = Date.now();
         thumbAImg.src = `/images/${sessionId}/thumbnail/a?t=${t}`;
         thumbBImg.src = `/images/${sessionId}/thumbnail/b?t=${t}`;
+        if (window.CropEditor) window.CropEditor.reset();
         refreshImageAReferences();
         runPreview();
       })
@@ -533,7 +584,10 @@
       })
       .then(() => {
         img.src = `/images/${sessionId}/thumbnail/${slot}?t=${Date.now()}`;
-        if (slot === "a") refreshImageAReferences();
+        if (slot === "a") {
+          if (window.CropEditor) window.CropEditor.reset();
+          refreshImageAReferences();
+        }
         if (slot === "b") {
           hasImageB = true;
           updateVisibility(effectsByName[effectSelect.value]);
@@ -647,6 +701,7 @@
       })
       .then(() => {
         if (window.MaskEditor) window.MaskEditor.clear();
+        if (window.CropEditor) window.CropEditor.reset();
         setCompareEnabled(false);
         thumbAImg.src = `/images/${sessionId}/thumbnail/a?t=${Date.now()}`;
         refreshImageAReferences();

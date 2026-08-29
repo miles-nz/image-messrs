@@ -569,7 +569,8 @@ button.secondary:hover:not(:disabled) {
 }
 
 .zoom-btn,
-.compare-toggle-btn {
+.compare-toggle-btn,
+.crop-toggle-btn {
     position: absolute;
     top: 0.75rem;
     right: 0.75rem;
@@ -588,19 +589,29 @@ button.secondary:hover:not(:disabled) {
     right: auto;
 }
 
+.crop-toggle-btn {
+    top: auto;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    right: auto;
+    z-index: 7;
+}
+
 .zoom-btn:hover:not(:disabled) {
     filter: none;
     border-color: var(--accent);
     color: var(--accent);
 }
 
-.compare-toggle-btn:hover:not(:disabled) {
+.compare-toggle-btn:hover:not(:disabled),
+.crop-toggle-btn:hover:not(:disabled) {
     filter: none;
     border-color: var(--accent);
     color: var(--accent);
 }
 
-.compare-toggle-btn.active {
+.compare-toggle-btn.active,
+.crop-toggle-btn.active {
     background: var(--accent-a);
     border-color: var(--accent-a);
     color: var(--bg);
@@ -609,7 +620,8 @@ button.secondary:hover:not(:disabled) {
         var(--shift-offset-x) var(--shift-offset-y-neg) 0 var(--accent-red);
 }
 
-.compare-toggle-btn.active:hover:not(:disabled) {
+.compare-toggle-btn.active:hover:not(:disabled),
+.crop-toggle-btn.active:hover:not(:disabled) {
     border-color: var(--accent-a);
     color: var(--bg);
 }
@@ -693,6 +705,69 @@ button.secondary:hover:not(:disabled) {
 
 .compare-tag-after {
     right: 0.5rem;
+}
+
+.crop-overlay {
+    position: absolute;
+    z-index: 6;
+}
+
+.crop-rect {
+    position: absolute;
+    border: 1px dashed var(--accent-a);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+    cursor: move;
+}
+
+.crop-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    margin: -5px;
+    background: #fff;
+    border: 1px solid var(--bg);
+    border-radius: 2px;
+}
+
+.crop-handle[data-handle="nw"] {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+}
+.crop-handle[data-handle="n"] {
+    top: 0;
+    left: 50%;
+    cursor: ns-resize;
+}
+.crop-handle[data-handle="ne"] {
+    top: 0;
+    left: 100%;
+    cursor: nesw-resize;
+}
+.crop-handle[data-handle="e"] {
+    top: 50%;
+    left: 100%;
+    cursor: ew-resize;
+}
+.crop-handle[data-handle="se"] {
+    top: 100%;
+    left: 100%;
+    cursor: nwse-resize;
+}
+.crop-handle[data-handle="s"] {
+    top: 100%;
+    left: 50%;
+    cursor: ns-resize;
+}
+.crop-handle[data-handle="sw"] {
+    top: 100%;
+    left: 0;
+    cursor: nesw-resize;
+}
+.crop-handle[data-handle="w"] {
+    top: 50%;
+    left: 0;
+    cursor: ew-resize;
 }
 
 .preview-loading {

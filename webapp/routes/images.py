@@ -13,10 +13,11 @@ from imagemessrs.effects.base import coerce_params
 from imagemessrs.effects.color.source_cameras import match_source_camera_from_exif
 from imagemessrs.video.param_sweep import apply_param_sweep
 
+from ..crop_utils import apply_crop
 from ..effect_serialization import serialize_effects
 from ..jobs import JOB_TRACKER
 from ..mask_utils import decode_mask
-from ..store import IMAGE_STORE
+from ..store import IMAGE_STORE, CropRect
 from ..video_store import OUTPUTS_DIR
 
 images_bp = Blueprint("images", __name__, url_prefix="/images")
@@ -153,6 +154,47 @@ def swap_images(session_id: str):
     return {"ok": True}
 
 
+@images_bp.route("/<session_id>/crop", methods=["POST"])
+def set_crop(session_id: str):
+    session = IMAGE_STORE.get(session_id)
+    if session is None:
+        abort(404)
+
+    if request.form.get("clear") == "true":
+        IMAGE_STORE.set_crop(session_id, None)
+        return {"ok": True}
+
+    try:
+        x = float(request.form["x"])
+        y = float(request.form["y"])
+        width = float(request.form["width"])
+        height = float(request.form["height"])
+    except (KeyError, ValueError):
+        abort(400, description="x, y, width, and height are required numbers")
+
+    x = max(0.0, min(1.0, x))
+    y = max(0.0, min(1.0, y))
+    width = max(0.0, min(1.0 - x, width))
+    height = max(0.0, min(1.0 - y, height))
+    if width <= 0 or height <= 0:
+        abort(400, description="crop rect must have positive width and height")
+
+    IMAGE_STORE.set_crop(session_id, CropRect(x=x, y=y, width=width, height=height))
+    return {"ok": True}
+
+
+@images_bp.route("/<session_id>/crop_preview", methods=["GET"])
+def crop_preview(session_id: str):
+    session = IMAGE_STORE.get(session_id)
+    if session is None:
+        abort(404)
+    source = session.original
+    if session.crop is not None:
+        source = apply_crop(source, session.crop)
+    preview_img = resize_max_edge(source, PREVIEW_MAX_EDGE)
+    return send_file(BytesIO(save_image(preview_img, fmt="PNG")), mimetype="image/png")
+
+
 def _run_effect(session_id: str, full_res: bool):
     session = IMAGE_STORE.get(session_id)
     if session is None:
@@ -170,6 +212,8 @@ def _run_effect(session_id: str, full_res: bool):
     params = coerce_params(effect.params, raw_params)
 
     source_a, source_b = session.original, session.original_b
+    if session.crop is not None:
+        source_a = apply_crop(source_a, session.crop)
     image_a = source_a if full_res else resize_max_edge(source_a, PREVIEW_MAX_EDGE)
 
     mask_param = next((p.name for p in effect.params if p.kind == "mask"), None)
@@ -263,6 +307,8 @@ def animate(session_id: str):
     base_params = coerce_params(effect.params, raw_params)
 
     source_a, source_b = session.original, session.original_b
+    if session.crop is not None:
+        source_a = apply_crop(source_a, session.crop)
     image_a = source_a if full_res else resize_max_edge(source_a, PREVIEW_MAX_EDGE)
 
     mask_param = next((p.name for p in effect.params if p.kind == "mask"), None)
