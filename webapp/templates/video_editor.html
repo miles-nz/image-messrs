@@ -60,21 +60,6 @@ endblock %}
                 <button type="submit">Upload motion clip</button>
             </form>
         </div>
-
-        <div class="download-row">
-            <a id="download-link" class="hidden" download="image-messrs-output.mp4"
-                >Download result</a
-            >
-            <button
-                type="button"
-                id="apply-video-btn"
-                class="secondary apply-effect-btn hidden"
-                title="Bake this rendered clip in as the new base video, then apply another technique on top of it"
-            >
-                Apply &amp; keep editing
-            </button>
-        </div>
-        <p id="apply-status" class="apply-status hidden"></p>
     </div>
 
     <div class="controls-pane">
@@ -109,11 +94,62 @@ endblock %}
 
         <div id="param-controls"></div>
 
+        <details id="vary-panel" class="animate-panel hidden">
+            <summary>
+                <svg class="animate-panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="6 4 20 12 6 20 6 4" />
+                </svg>
+                Vary Across Video
+            </summary>
+            <div class="effect-about-body">
+                <label class="checkbox-row">
+                    <input type="checkbox" id="vary-enable" />
+                    Vary one parameter across the video instead of holding it fixed
+                </label>
+                <div id="vary-controls" class="hidden">
+                    <label class="param-control">
+                        <span class="param-label">Parameter</span>
+                        <select id="vary-param-select"></select>
+                    </label>
+                    <label class="param-control">
+                        <span class="param-label">Start</span>
+                        <input type="number" id="vary-start" step="any" />
+                    </label>
+                    <label class="param-control">
+                        <span class="param-label">End</span>
+                        <input type="number" id="vary-end" step="any" />
+                    </label>
+                    <label class="param-control">
+                        <span class="param-label">Loop Style</span>
+                        <select id="vary-loop-style">
+                            <option value="ramp">Ramp (start &rarr; end)</option>
+                            <option value="ping_pong">Ping-pong (loop)</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+        </details>
+
         <div class="action-row">
             <button type="button" id="preview-btn" class="secondary">Preview (first 3s)</button>
             <button type="button" id="render-btn">Render Full Video</button>
         </div>
         <div id="job-status" class="job-status"></div>
+
+        <div class="download-row">
+            <a id="download-link" class="hidden" download="image-messrs-output.mp4"
+                >Download result</a
+            >
+            <button
+                type="button"
+                id="apply-video-btn"
+                class="secondary apply-effect-btn hidden"
+                title="Bake this rendered clip in as the new base video, then apply another technique on top of it"
+            >
+                Apply &amp; keep editing
+            </button>
+        </div>
+        <p id="apply-status" class="apply-status hidden"></p>
     </div>
 </div>
 

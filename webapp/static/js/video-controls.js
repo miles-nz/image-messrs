@@ -29,6 +29,23 @@
   const metaCodecEl = document.getElementById("meta-codec");
   const framePreviewLoadingEl = document.getElementById("frame-preview-loading");
   const framePreviewStatusEl = document.getElementById("frame-preview-status");
+  const varyPanelEl = document.getElementById("vary-panel");
+  const varyEnableCheckbox = document.getElementById("vary-enable");
+  const varyControlsEl = document.getElementById("vary-controls");
+  const varyParamSelect = document.getElementById("vary-param-select");
+  const varyStartInput = document.getElementById("vary-start");
+  const varyEndInput = document.getElementById("vary-end");
+  const varyLoopStyleSelect = document.getElementById("vary-loop-style");
+
+  const CATEGORY_ORDER = ["glitch", "blend", "color", "distort", "video", "seam_carve"];
+  const CATEGORY_LABELS = {
+    seam_carve: "Seam Carve",
+    glitch: "Glitch",
+    blend: "Blend",
+    color: "Color",
+    distort: "Distort",
+    video: "Video",
+  };
 
   let pollTimer = null;
   let framePreviewObjectUrl = null;
@@ -51,13 +68,59 @@
 
   function populateFrameEffectSelect() {
     frameEffectSelect.innerHTML = "";
-    frameEffectsData.forEach((effect) => {
-      const opt = document.createElement("option");
-      opt.value = effect.name;
-      opt.textContent = `${effect.label} (${effect.category})`;
-      opt.title = effect.description || "";
-      frameEffectSelect.appendChild(opt);
+    const categories = CATEGORY_ORDER.filter((cat) => frameEffectsData.some((e) => e.category === cat));
+    categories.forEach((category) => {
+      const group = document.createElement("optgroup");
+      group.label = CATEGORY_LABELS[category] || category;
+      frameEffectsData
+        .filter((e) => e.category === category)
+        .forEach((effect) => {
+          const opt = document.createElement("option");
+          opt.value = effect.name;
+          opt.textContent = effect.label;
+          opt.title = effect.description || "";
+          group.appendChild(opt);
+        });
+      frameEffectSelect.appendChild(group);
     });
+  }
+
+  function animatableParams(effect) {
+    return (effect ? effect.params : []).filter(
+      (p) => (p.kind === "float" || p.kind === "int") && p.min != null && p.max != null
+    );
+  }
+
+  function populateVaryParamSelect(effect) {
+    varyParamSelect.innerHTML = "";
+    animatableParams(effect).forEach((param) => {
+      const opt = document.createElement("option");
+      opt.value = param.name;
+      opt.textContent = param.label;
+      opt.title = param.description || "";
+      varyParamSelect.appendChild(opt);
+    });
+    updateVaryRangeDefaults(effect);
+  }
+
+  function updateVaryRangeDefaults(effect) {
+    const param = animatableParams(effect).find((p) => p.name === varyParamSelect.value);
+    if (!param) return;
+    varyStartInput.value = param.min;
+    varyEndInput.value = param.max;
+  }
+
+  function updateVaryPanelVisibility() {
+    const spec = currentSpec();
+    const effect = isFrameBridge(spec) ? currentFrameEffect() : null;
+    const canVary = !!effect && animatableParams(effect).length > 0;
+    varyPanelEl.classList.toggle("hidden", !canVary);
+    if (canVary) {
+      populateVaryParamSelect(effect);
+    } else {
+      varyEnableCheckbox.checked = false;
+      varyControlsEl.classList.add("hidden");
+    }
   }
 
   function isSubTechniqueBridge(spec) {
@@ -221,6 +284,7 @@
 
   function refreshControlsAndAbout() {
     const spec = currentSpec();
+    updateVaryPanelVisibility();
     if (isFrameBridge(spec)) {
       const effect = currentFrameEffect();
       buildParamControls(effect ? effect.params : [], scheduleFramePreview);
@@ -253,6 +317,12 @@
     formData.append("technique", techniqueSelect.value);
     if (isFrameBridge(spec)) {
       formData.append("frame_effect", frameEffectSelect.value);
+      if (!varyPanelEl.classList.contains("hidden") && varyEnableCheckbox.checked) {
+        formData.append("vary_param", varyParamSelect.value);
+        formData.append("vary_start", varyStartInput.value);
+        formData.append("vary_end", varyEndInput.value);
+        formData.append("vary_loop_style", varyLoopStyleSelect.value);
+      }
     }
     if (isSubTechniqueBridge(spec)) {
       formData.append("sub_technique", subTechniqueSelect.value);
@@ -398,6 +468,10 @@
   });
   frameEffectSelect.addEventListener("change", refreshControlsAndAbout);
   subTechniqueSelect.addEventListener("change", refreshControlsAndAbout);
+  varyEnableCheckbox.addEventListener("change", () => {
+    varyControlsEl.classList.toggle("hidden", !varyEnableCheckbox.checked);
+  });
+  varyParamSelect.addEventListener("change", () => updateVaryRangeDefaults(currentFrameEffect()));
   previewBtn.addEventListener("click", () => startJob(true));
   renderBtn.addEventListener("click", () => startJob(false));
   applyVideoBtn.addEventListener("click", applyVideo);

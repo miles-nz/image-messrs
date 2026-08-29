@@ -37,3 +37,35 @@ def test_apply_frame_effect_reports_progress(sample_video_path, tmp_path):
     )
     expected_count = get_frame_count(sample_video_path)
     assert seen_frames == [str(i) for i in range(1, expected_count + 1)]
+
+
+def test_apply_frame_effect_with_sweep_preserves_frame_count(sample_video_path, tmp_path):
+    output = str(tmp_path / "out.mp4")
+    frame_effects.apply_frame_effect_with_sweep(
+        sample_video_path, output, "channel_shift", {"red_dx": 0}, "blue_dx", 0, 20
+    )
+    assert get_frame_count(output) == get_frame_count(sample_video_path)
+
+
+def test_apply_frame_effect_with_sweep_varies_effect_across_frames(sample_video_path, tmp_path):
+    fixed_output = str(tmp_path / "fixed.mp4")
+    swept_output = str(tmp_path / "swept.mp4")
+    frame_effects.apply_frame_effect(sample_video_path, fixed_output, "channel_shift", {"blue_dx": 0, "red_dx": 0})
+    frame_effects.apply_frame_effect_with_sweep(
+        sample_video_path, swept_output, "channel_shift", {"red_dx": 0}, "blue_dx", 0, 20
+    )
+    fixed_frames = list(extract_frames(fixed_output))
+    swept_frames = list(extract_frames(swept_output))
+    assert not np.array_equal(fixed_frames[-1], swept_frames[-1])
+
+
+def test_apply_frame_effect_with_sweep_rejects_non_numeric_param(sample_video_path, tmp_path):
+    output = str(tmp_path / "out.mp4")
+    with pytest.raises(ValueError):
+        frame_effects.apply_frame_effect_with_sweep(sample_video_path, output, "channel_shift", {}, "nope", 0, 1)
+
+
+def test_apply_frame_effect_with_sweep_rejects_multi_image_effect(sample_video_path, tmp_path):
+    output = str(tmp_path / "out.mp4")
+    with pytest.raises(ValueError):
+        frame_effects.apply_frame_effect_with_sweep(sample_video_path, output, "poisson_blend", {}, "blend_factor", 0, 1)

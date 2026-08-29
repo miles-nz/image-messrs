@@ -389,15 +389,32 @@ def process(session_id: str):
     frame_effect_name = None
     frame_effect_params: dict = {}
     sub_technique_name = None
+    vary_param = None
+    vary_start = None
+    vary_end = None
+    vary_ping_pong = False
     if spec.get("frame_effect_bridge"):
         frame_effect_name = request.form.get("frame_effect")
         eligible = {e.name: e for e in _frame_effects()}
         if frame_effect_name not in eligible:
             abort(400, description=f"unknown or ineligible frame_effect {frame_effect_name!r}")
-        raw_params = {
-            k: v for k, v in request.form.items() if k not in ("technique", "frame_effect", "trim_preview")
-        }
-        frame_effect_params = coerce_params(eligible[frame_effect_name].params, raw_params)
+        effect = eligible[frame_effect_name]
+
+        vary_param = request.form.get("vary_param") or None
+        if vary_param is not None:
+            vary_spec = next((p for p in effect.params if p.name == vary_param), None)
+            if vary_spec is None or vary_spec.kind not in ("int", "float") or vary_spec.min is None or vary_spec.max is None:
+                abort(400, description=f"{vary_param!r} is not a varyable parameter of {frame_effect_name!r}")
+            try:
+                vary_start = float(request.form.get("vary_start", vary_spec.min))
+                vary_end = float(request.form.get("vary_end", vary_spec.max))
+            except (TypeError, ValueError):
+                abort(400, description="vary_start and vary_end must be numbers")
+            vary_ping_pong = request.form.get("vary_loop_style") == "ping_pong"
+
+        excluded = {"technique", "frame_effect", "trim_preview", "vary_param", "vary_start", "vary_end", "vary_loop_style"}
+        raw_params = {k: v for k, v in request.form.items() if k not in excluded}
+        frame_effect_params = coerce_params(effect.params, raw_params)
     elif spec.get("sub_techniques"):
         sub_technique_name = request.form.get("sub_technique")
         sub_spec = spec["sub_techniques"].get(sub_technique_name)
@@ -419,13 +436,26 @@ def process(session_id: str):
             base_path = _maybe_trim(original_path, trim, tmp_dir, "base" + original_path.suffix)
 
             if technique == "per_frame":
-                frame_effects.apply_frame_effect(
-                    str(base_path),
-                    str(output_path),
-                    frame_effect_name,
-                    frame_effect_params,
-                    on_progress=on_progress,
-                )
+                if vary_param is not None:
+                    frame_effects.apply_frame_effect_with_sweep(
+                        str(base_path),
+                        str(output_path),
+                        frame_effect_name,
+                        frame_effect_params,
+                        vary_param,
+                        vary_start,
+                        vary_end,
+                        ping_pong=vary_ping_pong,
+                        on_progress=on_progress,
+                    )
+                else:
+                    frame_effects.apply_frame_effect(
+                        str(base_path),
+                        str(output_path),
+                        frame_effect_name,
+                        frame_effect_params,
+                        on_progress=on_progress,
+                    )
             elif technique == "frame_blend":
                 datamosh.frame_blend(str(base_path), str(output_path), **params)
             elif technique == "change_speed":
