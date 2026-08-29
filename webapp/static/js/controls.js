@@ -450,6 +450,46 @@
         });
         input.addEventListener("change", schedulePreview);
         wrapper.appendChild(input);
+      } else if (param.kind === "color") {
+        const picker = document.createElement("div");
+        picker.className = "color-picker";
+
+        input = document.createElement("input");
+        input.type = "color";
+        input.value = param.default || "#ff8c3c";
+        if (param.description) input.title = param.description;
+
+        const swatchRow = document.createElement("div");
+        swatchRow.className = "color-swatch-row";
+        const syncActiveSwatch = () => {
+          swatchRow.querySelectorAll(".color-swatch").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.hex.toLowerCase() === input.value.toLowerCase());
+          });
+        };
+        (param.choices || []).forEach((hex) => {
+          const swatchBtn = document.createElement("button");
+          swatchBtn.type = "button";
+          swatchBtn.className = "color-swatch";
+          swatchBtn.style.background = hex;
+          swatchBtn.title = hex;
+          swatchBtn.dataset.hex = hex;
+          if (hex.toLowerCase() === input.value.toLowerCase()) swatchBtn.classList.add("active");
+          swatchBtn.addEventListener("click", () => {
+            input.value = hex;
+            syncActiveSwatch();
+            schedulePreview();
+          });
+          swatchRow.appendChild(swatchBtn);
+        });
+
+        input.addEventListener("input", () => {
+          syncActiveSwatch();
+          schedulePreview();
+        });
+
+        picker.appendChild(swatchRow);
+        picker.appendChild(input);
+        wrapper.appendChild(picker);
       } else {
         return;
       }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import uuid
 from io import BytesIO
@@ -228,6 +229,10 @@ def _run_effect(session_id: str, full_res: bool):
     else:
         args = (image_a,)
 
+    if "resolution_scale" in inspect.signature(effect.fn).parameters:
+        full_edge = max(source_a.shape[:2])
+        params["resolution_scale"] = max(image_a.shape[:2]) / full_edge if full_edge else 1.0
+
     try:
         result = effect.fn(*args, **params)
     except Exception as exc:  # user-controlled slider input reaching numerical code
@@ -320,6 +325,10 @@ def animate(session_id: str):
         if source_b is None:
             abort(400, description="This effect needs a second image - upload one first")
         image_b = source_b if full_res else resize_max_edge(source_b, PREVIEW_MAX_EDGE)
+
+    if "resolution_scale" in inspect.signature(effect.fn).parameters:
+        full_edge = max(source_a.shape[:2])
+        base_params["resolution_scale"] = max(image_a.shape[:2]) / full_edge if full_edge else 1.0
 
     output_path = OUTPUTS_DIR / f"{uuid.uuid4().hex}.mp4"
 

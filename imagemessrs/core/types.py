@@ -7,7 +7,7 @@ import numpy as np
 
 ImageArray = np.ndarray  # uint8, HxWxC, RGB
 
-ParamKind = Literal["float", "int", "bool", "choice", "mask"]
+ParamKind = Literal["float", "int", "bool", "choice", "color", "mask"]
 
 
 @dataclass

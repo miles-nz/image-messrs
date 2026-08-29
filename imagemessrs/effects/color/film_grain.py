@@ -36,8 +36,8 @@ def _clumped_noise(rng: np.random.Generator, shape: tuple[int, ...], size: float
             description="Strength of the grain. 0 disables the effect entirely.",
         ),
         ParamSpec(
-            name="size", kind="float", default=1.0, min=0.0, max=8.0, step=0.1, label="Grain Size",
-            description="Blur radius applied to the noise before adding it, controlling how large and clumpy each grain looks. 0 gives the finest, most pixel-level speckle.",
+            name="size", kind="float", default=0.3, min=0.0, max=4.0, step=0.05, label="Grain Size",
+            description="Blur radius applied to the noise before adding it, controlling how large and clumpy each grain looks. 0 gives the finest, most pixel-level speckle. Real film grain reads as fine texture, so realistic values sit near the low end of this range - past about 1.0 grains stop looking like grain and start looking like blotchy patches.",
         ),
         ParamSpec(
             name="monochrome", kind="bool", default=True, label="Monochrome",
@@ -55,6 +55,7 @@ def apply(
     size: float = 1.0,
     monochrome: bool = True,
     seed: int = 0,
+    resolution_scale: float = 1.0,
 ) -> ImageArray:
     if intensity <= 0:
         return image.copy()
@@ -63,10 +64,21 @@ def apply(
     rng = np.random.default_rng(int(seed))
     img = image.astype(np.float32)
 
-    if monochrome:
-        noise = _clumped_noise(rng, (h, w), float(size))[..., None]
-    else:
-        noise = _clumped_noise(rng, (h, w, 3), float(size))
+    # `size` and `intensity` are tuned for full-resolution output. When this
+    # runs on a downscaled preview, grain clumps would otherwise occupy a
+    # bigger fraction of the (smaller) frame than they will at full size, and
+    # - since the eventual full-res grain is fine enough that resizing it
+    # down to preview size for display averages a lot of its amplitude away
+    # - the preview would also read far louder than the real output. Scaling
+    # both by the same downscale factor keeps the preview honest about what
+    # the baked, full-resolution result will actually look like.
+    grain_size = float(size) * float(resolution_scale)
+    effective_intensity = float(intensity) * float(resolution_scale)
 
-    out = img + noise * float(intensity) * _NOISE_SCALE
+    if monochrome:
+        noise = _clumped_noise(rng, (h, w), grain_size)[..., None]
+    else:
+        noise = _clumped_noise(rng, (h, w, 3), grain_size)
+
+    out = img + noise * effective_intensity * _NOISE_SCALE
     return np.clip(out, 0, 255).astype(np.uint8)

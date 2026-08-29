@@ -945,6 +945,60 @@ input[type="number"] {
     width: 6ch;
 }
 
+input[type="color"] {
+    width: 2.4rem;
+    height: 1.6rem;
+    padding: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 3px;
+}
+
+.color-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.color-swatch-row {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.color-swatch {
+    width: 1.15rem;
+    height: 1.15rem;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.color-swatch:hover:not(:disabled) {
+    box-shadow: none;
+    border-color: var(--accent);
+}
+
+.color-swatch.active {
+    border-color: var(--accent-a);
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--accent-a);
+}
+
+.color-swatch.active:hover:not(:disabled) {
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--accent-a);
+}
+
 input[type="range"] {
     flex: 1;
     margin: 0 0.5rem;

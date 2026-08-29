@@ -14,9 +14,12 @@ carving).
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ..core.types import ParamSpec
+
+_HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 def coerce_params(params: list[ParamSpec], raw: dict[str, Any]) -> dict[str, Any]:
@@ -36,6 +39,9 @@ def coerce_params(params: list[ParamSpec], raw: dict[str, Any]) -> dict[str, Any
             out[spec.name] = value in (True, "true", "True", "1", "on", 1)
         elif spec.kind == "choice":
             out[spec.name] = str(value)
+        elif spec.kind == "color":
+            candidate = str(value).strip()
+            out[spec.name] = candidate if _HEX_COLOR_RE.match(candidate) else spec.default
         else:  # "mask" or anything else passed through as-is
             out[spec.name] = value
     return out
